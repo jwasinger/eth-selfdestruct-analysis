@@ -2,6 +2,26 @@ reincarnations = {}
 ephemerals = {}
 deleted = {}
 
+class MessageCall():
+    def __init__(self, status, typ, sender, receiver, callstack):
+        self.status = status
+        self.type = typ 
+        self.sender = sender
+        self.receiver = receiver
+        self.callstack = callstack 
+        self.tx_index = tx_index
+
+    def FromCSVLine(s: str) -> Self:
+        status = ''
+        sender = ''
+        receiver = ''
+        callstack = []
+        tx_index = 0
+
+        # TODO parse
+
+        return MessageCall(status, sender, receiver, callstack, tx_index)
+
 def consume_transaction(lines):
     # TODO read tx_hash of first tx
     calls = []
@@ -29,6 +49,8 @@ def consume_transaction(lines):
             # if the frame was a create, mark it as created
         # else if entering a call-frame:
             # if the frame is a selfdestruct:
+                # if the contract already selfdestructed in this tx:
+                    # continue
                 # if the contract's address was in created:
                     # remove it from created and add it to ephemerals 
                 # else:
