@@ -135,7 +135,11 @@ def consume_transaction(lines):
     return len(txs)
 
 def main():
-    csv_lines = readlines() 
+    csv_lines = []
+    offset = 0
+
+    with open('data.csv', 'r') as f:
+        csv_lines = f.readlines() 
 
     if len(csv_lines) == 0:
         return
@@ -145,3 +149,5 @@ def main():
         offset += lines_read
 
     # TODO create csv for ephemerals, incarnations
+    import pdb; pdb.set_trace()
+    foo = 'bar'
