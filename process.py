@@ -1,9 +1,7 @@
 reincarnations = {}
 ephemerals = {}
-deleted = {}
-
-def parse_callstack(callstack_field: str) -> [str]:
-    pass
+selfdestructed = {}
+created = {}
 
 def parse_tx_index(tx_index_field: str) -> int:
     splitted = tx_index_field.split('_')[2:]
@@ -53,26 +51,42 @@ class MessageCall():
 def consume_transaction(lines):
     # TODO read tx_hash of first tx
     calls = []
+    tx_created = {}
+    tx_selfdestructed = {}
+    tx_ephemerals = {}
 
-    for line in lines[1:]:
-        tx_hash = parse_tx_hash(line)
-        if tx_hash != first_tx_hash:
-            break
-        else:
-            calls.append(line)
+    if len(lines) > 1:
+        first_tx_hash = parse_tx_hash(lines[0])
 
-    if len(txs) > 1:
-        # order txs
+        for line in lines[1:]:
+            tx_hash = parse_tx_hash(line)
+            if tx_hash != first_tx_hash:
+                break
+            else:
+                calls.append(line)
+
+        if len(calls) > 1:
+            calls = sort_tx_calls(calls)
+    elif len(lines) == 1
+        calls = 
 
     # revert of the top-level call, move to the next tx
     if calls[0]['status'] == '1':
         return len(txs)
 
-
     for call in calls:
-        # if the call failed, continue
+        if call.result == '0':
+            continue
 
-        # TODO what happens to self-destruct inside of create ?
+        if call.type == 'create':
+            # TODO what happens to self-destruct inside of create ?
+            tx_created.add(call.receiver)
+        elif call.type == 'selfdestruct':
+            if not call.sender in tx_destructed and not call.sender in tx_ephemerals:
+                if call.sender in tx_created:
+                    tx_ephemerals.add(call.sender)
+                else:
+                    tx_destructed.add(call.sender)
 
         # if exiting a call-frame:
             # if the frame was a create, mark it as created
@@ -84,6 +98,31 @@ def consume_transaction(lines):
                     # remove it from created and add it to ephemerals 
                 # else:
                     # add it to deleted
+    for address in tx_created:
+        if address in created:
+            raise Exception("address created twice without being deleted: {0}".format(address))
+        if address in selfdestructed:
+            del selfdestructed[address]
+            if address in reincarnations:
+                reincarnations[address] = 1
+            else: 
+                reincarnations[address]++
+        created.add(address)
+
+    for address in tx_selfdestructed:
+        if address in selfdestructed:
+            raise Exception("address selfdestructed twice without being resurected in-between: {0}".format(address))
+
+        if address in created:
+            del created[address]
+        selfdestructed.add(address)
+
+    for address in tx_ephemerals:
+        if not address in ephemerals:
+            ephemerals[address] = 1
+        else:
+            ephemerals[address]++
+
     # --- end of transaction: ---
     # for each address in deleted:
         # add to global deleted (shouldn't already be there)
