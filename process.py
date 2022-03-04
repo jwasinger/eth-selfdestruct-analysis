@@ -89,7 +89,7 @@ def consume_transaction(lines):
 
     for call in calls:
         if call.status == 0:
-            raise Exception("internal call failure?")
+            continue
 
         if call.type == 'create':
             # TODO what happens to self-destruct inside of create ?
@@ -115,12 +115,11 @@ def consume_transaction(lines):
         if address in created:
             raise Exception("address created twice without being deleted: {0}".format(address))
         if address in selfdestructed:
-            import pdb; pdb.set_trace()
             selfdestructed.remove(address)
             if address in reincarnations:
-                reincarnations[address] = 1
-            else: 
                 reincarnations[address] += 1
+            else: 
+                reincarnations[address] = 1
         created.add(address)
 
     for address in tx_selfdestructed:
@@ -180,7 +179,7 @@ def main():
         lines_read = consume_transaction(csv_lines[offset:])
         offset += lines_read
         if (total_lines - offset) % 20 == 0:
-            print("{0} traces left to analyze".format(total_lines - offset) + advance_progress(), end='\r')
+            print("{0} traces left to analyze".format(total_lines - offset) + advance_progress())#, end='\r')
 
     # TODO create csv for ephemerals, incarnations
     import pdb; pdb.set_trace()
