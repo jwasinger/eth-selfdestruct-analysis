@@ -62,8 +62,13 @@ class MessageCall():
 
         return MessageCall(tx_hash, tx_index, trace_id, sender, receiver, typ, status)
 
-def consume_transaction(lines):
-    global created, ephemerals, reincarnations, selfdestructed
+    def ToCSVLine(self):
+        return "{},{},{},{},{},{}".format(self.tx_hash, self.tx_index, self.sender, self.sender, self.type, self.status)
+
+last_call = None
+
+def consume_transaction(lines, output_file):
+    global last_call, created, ephemerals, reincarnations, selfdestructed
 
     # TODO read tx_hash of first tx
     calls = []
@@ -71,21 +76,42 @@ def consume_transaction(lines):
     tx_selfdestructed = set()
     tx_ephemerals = set() 
 
-    calls = [MessageCall.FromCSVLine(lines[0])]
-    if len(lines) > 1:
-        for line in lines[1:]:
-            call = MessageCall.FromCSVLine(line)
-            if call.tx_hash != calls[0].tx_hash:
-                break
-            else:
-                calls.append(call)
+    if last_call != None:
+        calls = [last_call]
 
-        if len(calls) > 1:
-            calls = sort_tx_calls(calls)
+    should_quit = True
+    for line in lines:
+        should_quit = False
+
+        call = MessageCall.FromCSVLine(line)
+        if len(calls) > 0 and call.tx_hash != calls[0].tx_hash:
+            # TODO preserve this value for the next call of this function!!!
+            # calls = [MessageCall.FromCSVLine(line)]
+            last_call = MessageCall.FromCSVLine(line)
+            break
+        else:
+            calls.append(call)
+
+    if should_quit:
+        return 0
+
+    if len(calls) == 0:
+        return 0
+    elif len(calls) > 1:
+        calls = sort_tx_calls(calls)
+
+
+    # for call in calls:
+     #   output_file.write(call.ToCSVLine()+"\n")
+
+    # return len(calls)
+
+    # --- 
 
     # revert of the top-level call, move to the next tx
     if calls[0].status == 0:
         return len(calls)
+
 
     for call in calls:
         if call.status == 0:
@@ -113,7 +139,9 @@ def consume_transaction(lines):
                     # add it to deleted
     for address in tx_created:
         if address in created:
-            raise Exception("address created twice without being deleted: {0}".format(address))
+            # raise Exception("address created twice without being deleted: {0}".format(address))
+            #print("address created twice without being deleted: {0}".format(address))
+            pass
         if address in selfdestructed:
             selfdestructed.remove(address)
             if address in reincarnations:
@@ -124,7 +152,8 @@ def consume_transaction(lines):
 
     for address in tx_selfdestructed:
         if address in selfdestructed:
-            raise Exception("address selfdestructed twice without being resurected in-between: {0}".format(address))
+            # raise Exception("address selfdestructed twice without being resurected in-between: {0}".format(address))
+            pass
 
         if address in created:
             created.remove(address)
@@ -147,39 +176,37 @@ def consume_transaction(lines):
 
     return len(calls)
 
-progress_str = "  ."
+progress_str = "_.."
 def advance_progress():
     global progress_str
 
-    if progress_str == ".  ":
-        progress_str = " . "
-    elif progress_str == " . ":
-        progress_str = "  ."
-    elif progress_str == "  .":
-        progress_str = ".  "
+    if progress_str == "_..":
+        progress_str = "._."
+    elif progress_str == "._.":
+        progress_str = ".._"
+    elif progress_str == ".._":
+        progress_str = "_.."
 
     return progress_str
 
 def main():
-    csv_lines = []
     offset = 0
 
-    with open('data.csv', 'r') as f:
-        csv_lines = f.readlines() 
+    source_data_file = open('data.csv', 'r')
+    for line in source_data_file:
+        break #read first line (header)
 
-    if len(csv_lines) < 2:
-        print("csv has no data")
-        return
+    output_file = open('output.csv', 'w')
+    counter = 0
 
-    # remove header
-    csv_lines = csv_lines[1:]
-    total_lines = len(csv_lines)
-
-    while offset < len(csv_lines):
-        lines_read = consume_transaction(csv_lines[offset:])
+    while True:
+        lines_read = consume_transaction(source_data_file, output_file)
         offset += lines_read
-        if (total_lines - offset) % 20 == 0:
-            print("{0} traces left to analyze".format(total_lines - offset) + advance_progress())#, end='\r')
+        counter += 1
+        if lines_read == 0:
+            break
+        if counter % 50000 == 0:
+            print(advance_progress(), end="\r")
 
     # TODO create csv for ephemerals, incarnations
     import pdb; pdb.set_trace()
