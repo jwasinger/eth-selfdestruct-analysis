@@ -4,6 +4,7 @@ reincarnations = {}
 ephemerals = {}
 selfdestructed = set()
 created = set()
+total_lines = 0
 
 def sort_tx_calls(calls):
     max_call_depth = 1
@@ -62,6 +63,8 @@ class MessageCall():
         return MessageCall(tx_hash, tx_index, trace_id, sender, receiver, typ, status)
 
 def consume_transaction(lines):
+    global created, ephemerals, reincarnations, selfdestructed
+
     # TODO read tx_hash of first tx
     calls = []
     tx_created = set()
@@ -112,6 +115,7 @@ def consume_transaction(lines):
         if address in created:
             raise Exception("address created twice without being deleted: {0}".format(address))
         if address in selfdestructed:
+            import pdb; pdb.set_trace()
             selfdestructed.remove(address)
             if address in reincarnations:
                 reincarnations[address] = 1
@@ -144,6 +148,19 @@ def consume_transaction(lines):
 
     return len(calls)
 
+progress_str = "  ."
+def advance_progress():
+    global progress_str
+
+    if progress_str == ".  ":
+        progress_str = " . "
+    elif progress_str == " . ":
+        progress_str = "  ."
+    elif progress_str == "  .":
+        progress_str = ".  "
+
+    return progress_str
+
 def main():
     csv_lines = []
     offset = 0
@@ -157,10 +174,13 @@ def main():
 
     # remove header
     csv_lines = csv_lines[1:]
+    total_lines = len(csv_lines)
 
     while offset < len(csv_lines):
         lines_read = consume_transaction(csv_lines[offset:])
         offset += lines_read
+        if (total_lines - offset) % 20 == 0:
+            print("{0} traces left to analyze".format(total_lines - offset) + advance_progress(), end='\r')
 
     # TODO create csv for ephemerals, incarnations
     import pdb; pdb.set_trace()
