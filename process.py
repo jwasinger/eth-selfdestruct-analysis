@@ -1,93 +1,103 @@
+import functools
+
 reincarnations = {}
 ephemerals = {}
-selfdestructed = {}
-created = {}
-
-def parse_tx_index(tx_index_field: str) -> int:
-    splitted = tx_index_field.split('_')[2:]
-    splitted = map(lambda x: int(x), splitted)
-    return splitted
+selfdestructed = set()
+created = set()
 
 def sort_tx_calls(calls):
     max_call_depth = 1
     for call in calls:
-        if len(calls.tx_id) > max_call_depth:
-            max_call_depth = len(calls.tx_id)
+        if len(call.trace_id) > max_call_depth:
+            max_call_depth = len(call.trace_id)
 
-    def score_fn(call) -> int:
+    def score_fn(trace_id) -> int:
         score = 0
-        for i in range(len(call.call_id)):
-            score += call.call_id * 10**(max_call_depth - i)
+        for i in range(len(trace_id)):
+            score += trace_id[i] * 10**(max_call_depth - i)
         return score
 
     def sort_fn(x, y) -> int:
-        return score_fn(x.call_id) < score_fn(y.call_id)
+        if score_fn(x.trace_id) < score_fn(y.trace_id):
+            return -1
+        else:
+            return 1
 
-    return sorted(lambda x,y: sort_fn(x,y), calls)
+    return sorted(calls, key=functools.cmp_to_key(sort_fn))
+
+def parse_trace_id(s: str):
+    parts = s.split('_')[2:]
+    parts = [part for part in parts if part != '']
+    parts = [int(part) for part in parts]
+
+    if len(parts) == 0:
+        parts = [0]
+    return parts
 
 class MessageCall():
-    def __init__(self, status, typ, sender, receiver, tx_index, call_depth):
-        self.status = status
-        self.type = typ 
+    def __init__(self, tx_hash, tx_index, trace_id, sender, receiver, typ, status):
+        self.tx_hash = tx_hash
+        self.tx_index = tx_index
+        self.trace_id = trace_id
         self.sender = sender
         self.receiver = receiver
-        self.tx_id = tx_id
-        self.call_depth = call_depth
+        self.type = typ
+        self.status = status
 
-    def FromCSVLine(s: str) -> Self:
+    @staticmethod
+    def FromCSVLine(s: str):
         parts = s.split(',')
 
-        if len(parts) != 5:
+        if len(parts) != 8:
             raise Exception("wrong length")
 
-        status = parts[0]
-        sender = parts[1]
-        receiver = parts[2]
-        
-        tx_index = parse_tx_index(parts[4])
+        tx_hash = parts[1]
+        tx_index = int(parts[2])
+        trace_id = parse_trace_id(parts[3])
+        sender = parts[4]
+        receiver = parts[5]
+        typ = parts[6]
+        status = int(parts[7])
 
-        return MessageCall(status, sender, receiver, callstack, tx_index)
+        return MessageCall(tx_hash, tx_index, trace_id, sender, receiver, typ, status)
 
 def consume_transaction(lines):
     # TODO read tx_hash of first tx
     calls = []
-    tx_created = {}
-    tx_selfdestructed = {}
-    tx_ephemerals = {}
+    tx_created = set()
+    tx_selfdestructed = set()
+    tx_ephemerals = set() 
 
+    calls = [MessageCall.FromCSVLine(lines[0])]
     if len(lines) > 1:
-        first_tx_hash = parse_tx_hash(lines[0])
-
         for line in lines[1:]:
-            tx_hash = parse_tx_hash(line)
-            if tx_hash != first_tx_hash:
+            call = MessageCall.FromCSVLine(line)
+            if call.tx_hash != calls[0].tx_hash:
                 break
             else:
-                calls.append(line)
+                calls.append(call)
 
         if len(calls) > 1:
             calls = sort_tx_calls(calls)
-    elif len(lines) == 1
-        calls = 
 
     # revert of the top-level call, move to the next tx
-    if calls[0]['status'] == '1':
-        return len(txs)
+    if calls[0].status == 0:
+        return len(calls)
 
     for call in calls:
-        if call.result == '0':
-            continue
+        if call.status == 0:
+            raise Exception("internal call failure?")
 
         if call.type == 'create':
             # TODO what happens to self-destruct inside of create ?
             tx_created.add(call.receiver)
-        elif call.type == 'selfdestruct':
-            if not call.sender in tx_destructed and not call.sender in tx_ephemerals:
+        else: # call is selfdestruct
+            if not call.sender in tx_selfdestructed and not call.sender in tx_ephemerals:
                 if call.sender in tx_created:
                     tx_ephemerals.add(call.sender)
+                    tx_created.remove(call.sender)
                 else:
-                    tx_destructed.add(call.sender)
-
+                    tx_selfdestructed.add(call.sender)
         # if exiting a call-frame:
             # if the frame was a create, mark it as created
         # else if entering a call-frame:
@@ -102,11 +112,11 @@ def consume_transaction(lines):
         if address in created:
             raise Exception("address created twice without being deleted: {0}".format(address))
         if address in selfdestructed:
-            del selfdestructed[address]
+            selfdestructed.remove(address)
             if address in reincarnations:
                 reincarnations[address] = 1
             else: 
-                reincarnations[address]++
+                reincarnations[address] += 1
         created.add(address)
 
     for address in tx_selfdestructed:
@@ -114,14 +124,14 @@ def consume_transaction(lines):
             raise Exception("address selfdestructed twice without being resurected in-between: {0}".format(address))
 
         if address in created:
-            del created[address]
+            created.remove(address)
         selfdestructed.add(address)
 
     for address in tx_ephemerals:
         if not address in ephemerals:
             ephemerals[address] = 1
         else:
-            ephemerals[address]++
+            ephemerals[address] += 1
 
     # --- end of transaction: ---
     # for each address in deleted:
@@ -132,7 +142,7 @@ def consume_transaction(lines):
     # for each address in ephemerals:
         # update the creator ephemeral count
 
-    return len(txs)
+    return len(calls)
 
 def main():
     csv_lines = []
@@ -141,8 +151,12 @@ def main():
     with open('data.csv', 'r') as f:
         csv_lines = f.readlines() 
 
-    if len(csv_lines) == 0:
+    if len(csv_lines) < 2:
+        print("csv has no data")
         return
+
+    # remove header
+    csv_lines = csv_lines[1:]
 
     while offset < len(csv_lines):
         lines_read = consume_transaction(csv_lines[offset:])
@@ -151,3 +165,6 @@ def main():
     # TODO create csv for ephemerals, incarnations
     import pdb; pdb.set_trace()
     foo = 'bar'
+
+if __name__ == "__main__":
+    main()
