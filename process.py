@@ -1,4 +1,5 @@
 import functools
+import glob
 
 reincarnations = {}
 ephemerals = {}
@@ -49,71 +50,36 @@ class MessageCall():
     def FromCSVLine(s: str):
         parts = s.split(',')
 
-        if len(parts) != 8:
+        if len(parts) != 10:
             raise Exception("wrong length")
 
-        tx_hash = parts[1]
-        tx_index = int(parts[2])
-        trace_id = parse_trace_id(parts[3])
-        sender = parts[4]
-        receiver = parts[5]
-        typ = parts[6]
-        status = int(parts[7])
+        tx_hash = parts[2]
+        tx_index = int(parts[3])
+        trace_id = parse_trace_id(parts[4])
+        sender = parts[5]
+        receiver = parts[6]
+        typ = parts[7]
+        status = int(parts[8])
 
         return MessageCall(tx_hash, tx_index, trace_id, sender, receiver, typ, status)
 
     def ToCSVLine(self):
         return "{},{},{},{},{},{}".format(self.tx_hash, self.tx_index, self.sender, self.sender, self.type, self.status)
 
-last_call = None
+tx_calls = []
+tx_created = set()
+tx_selfdestructed = set()
+tx_ephemerals = set() 
 
-def consume_transaction(lines, output_file):
-    global last_call, created, ephemerals, reincarnations, selfdestructed
+def process_transaction():
+    global tx_calls, tx_created, tx_selfdestructed, tx_ephemerals
+    global reincarnations, ephemerals, selfdestructed, created
 
-    # TODO read tx_hash of first tx
-    calls = []
-    tx_created = set()
-    tx_selfdestructed = set()
-    tx_ephemerals = set() 
+    # sort calls
+    if len(tx_calls) > 1:
+        sort_tx_calls(tx_calls)
 
-    if last_call != None:
-        calls = [last_call]
-
-    should_quit = True
-    for line in lines:
-        should_quit = False
-
-        call = MessageCall.FromCSVLine(line)
-        if len(calls) > 0 and call.tx_hash != calls[0].tx_hash:
-            # TODO preserve this value for the next call of this function!!!
-            # calls = [MessageCall.FromCSVLine(line)]
-            last_call = MessageCall.FromCSVLine(line)
-            break
-        else:
-            calls.append(call)
-
-    if should_quit:
-        return 0
-
-    if len(calls) == 0:
-        return 0
-    elif len(calls) > 1:
-        calls = sort_tx_calls(calls)
-
-
-    # for call in calls:
-     #   output_file.write(call.ToCSVLine()+"\n")
-
-    # return len(calls)
-
-    # --- 
-
-    # revert of the top-level call, move to the next tx
-    if calls[0].status == 0:
-        return len(calls)
-
-
-    for call in calls:
+    for call in tx_calls:
         if call.status == 0:
             continue
 
@@ -127,19 +93,9 @@ def consume_transaction(lines, output_file):
                     tx_created.remove(call.sender)
                 else:
                     tx_selfdestructed.add(call.sender)
-        # if exiting a call-frame:
-            # if the frame was a create, mark it as created
-        # else if entering a call-frame:
-            # if the frame is a selfdestruct:
-                # if the contract already selfdestructed in this tx:
-                    # continue
-                # if the contract's address was in created:
-                    # remove it from created and add it to ephemerals 
-                # else:
-                    # add it to deleted
     for address in tx_created:
         if address in created:
-            # raise Exception("address created twice without being deleted: {0}".format(address))
+            raise Exception("address created twice without being deleted: {0}".format(address))
             #print("address created twice without being deleted: {0}".format(address))
             pass
         if address in selfdestructed:
@@ -152,7 +108,7 @@ def consume_transaction(lines, output_file):
 
     for address in tx_selfdestructed:
         if address in selfdestructed:
-            # raise Exception("address selfdestructed twice without being resurected in-between: {0}".format(address))
+            raise Exception("address selfdestructed twice without being resurected in-between: {0}".format(address))
             pass
 
         if address in created:
@@ -165,16 +121,20 @@ def consume_transaction(lines, output_file):
         else:
             ephemerals[address] += 1
 
-    # --- end of transaction: ---
-    # for each address in deleted:
-        # add to global deleted (shouldn't already be there)
-    # for each address in created:
-        # if it is in global deleted:
-            # add it to reincarnations or increment the incarnation number if it is already there
-    # for each address in ephemerals:
-        # update the creator ephemeral count
+    tx_calls = []
+    tx_created = set()
+    tx_selfdestructed = set()
+    tx_ephemerals = set() 
 
-    return len(calls)
+def consume_line(line):
+    global last_call, created, ephemerals, reincarnations, selfdestructed, tx_calls
+
+    call = MessageCall.FromCSVLine(line)
+
+    if len(tx_calls) > 0 and tx_calls[0].tx_hash != call.tx_hash:
+        process_transaction()
+    else:
+        tx_calls.append(call)
 
 progress_str = "_.."
 def advance_progress():
@@ -192,25 +152,27 @@ def advance_progress():
 def main():
     offset = 0
 
-    source_data_file = open('data.csv', 'r')
-    for line in source_data_file:
-        break #read first line (header)
-
     output_file = open('output.csv', 'w')
     counter = 0
 
-    while True:
-        lines_read = consume_transaction(source_data_file, output_file)
-        offset += lines_read
-        counter += 1
-        if lines_read == 0:
-            break
-        if counter % 50000 == 0:
-            print(advance_progress(), end="\r")
+    input_files = sorted(glob.glob("data/*.csv"))
+    for input_file in input_files:
+        source_data_file = open(input_file, 'r')
+        for line in source_data_file:
+            break #read first line (header)
 
-    # TODO create csv for ephemerals, incarnations
-    import pdb; pdb.set_trace()
-    foo = 'bar'
+        for line in source_data_file:
+            consume_line(line)
+            counter += 1
+            if counter % 10000 == 0:
+                print(advance_progress(), end="\r")
+
+        print("ephemerals length = {}".format(len(ephemerals)))
+        print("selfdestructed length ={}".format(len(selfdestructed)))
+        import pdb; pdb.set_trace()
+        foo = 'bar'
+
+    process_transaction()
 
 if __name__ == "__main__":
     main()
