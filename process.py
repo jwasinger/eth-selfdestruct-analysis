@@ -49,7 +49,7 @@ class MessageCall():
     def FromCSVLine(s: str):
         parts = s.split(',')
 
-        if len(parts) != 11:
+        if len(parts) != 10:
             raise Exception("wrong length")
 
         block_number = int(parts[0])
@@ -59,8 +59,8 @@ class MessageCall():
         sender = parts[5]
         receiver = parts[6]
         typ = parts[7]
-        status = int(parts[9])
-        calltype = parts[8]
+        status = int(parts[8])
+        calltype = None# parts[8]
 
         return MessageCall(block_number, tx_hash, tx_index, trace_id, sender, receiver, typ, status, calltype)
 
@@ -86,9 +86,6 @@ def process_transaction():
 
         if call.type == 'create':
             # TODO what happens to self-destruct inside of create ?
-            if call.receiver == '':
-                import pdb; pdb.set_trace()
-                baz = 'bat'
             tx_created.add(call.receiver)
         else: # call is selfdestruct
             if not call.sender in tx_selfdestructed and not call.sender in tx_ephemerals:
@@ -101,8 +98,6 @@ def process_transaction():
         if address in created:
             import pdb; pdb.set_trace()
             raise Exception("address created twice without being deleted: {0}".format(address))
-            #print("address created twice without being deleted: {0}".format(address))
-            pass
         if address in selfdestructed:
             selfdestructed.remove(address)
             if address in reincarnations:
@@ -112,6 +107,10 @@ def process_transaction():
         created.add(address)
 
     for address in tx_selfdestructed:
+        if address == "0x82970e56d1b4aa2af1f90be3347afe87c8859d16":
+            import pdb; pdb.set_trace()
+            foo = 'bar'
+
         if address in selfdestructed:
             import pdb; pdb.set_trace()
             raise Exception("address selfdestructed twice without being resurected in-between: {0}".format(address))
@@ -147,8 +146,8 @@ def consume_line(line, start_block, break_block):
 
     if len(tx_calls) > 0 and tx_calls[0].tx_hash != call.tx_hash:
         process_transaction()
-    else:
-        tx_calls.append(call)
+
+    tx_calls.append(call)
 
     return False
 
@@ -172,13 +171,13 @@ def main():
     counter = 0
     # start_block=9000000
     start_block= 0 # 9000000
-    break_on_block_number = 10000000
+    break_on_block_number = 12799316
     should_break = False
 
     # txs_lines = open('tx-data.csv', 'r')
-    #input_files = sorted(glob.glob("data-traces/*.csv"))
-    # input_files = ["data-traces/data-000000000099.csv"]
-    input_files = ["mystery2.csv"]
+    # input_files = sorted(glob.glob("data-traces/*.csv"))
+    input_files = ["data-traces/data-000000000181.csv", "data-traces/data-000000000182.csv"]
+    # input_files = ["mystery2.csv"]
 
     for input_file in input_files:
         source_data_file = open(input_file, 'r')
@@ -200,13 +199,15 @@ def main():
             break
 
         print(input_file)
-        print("ephemerals length = {}".format(len(ephemerals)))
-        print("selfdestructed length ={}".format(len(selfdestructed)))
-    import pdb; pdb.set_trace()
-    foo = 'bar'
+        total_incarnations = 0
+        for account, destructed_amt in reincarnations.items():
+            total_incarnations += destructed_amt
+        print("total contracts ={}".format(total_incarnations + len(created)))
 
     if not should_break:
         process_transaction()
+
+    import pdb; pdb.set_trace()
 
 if __name__ == "__main__":
     main()
