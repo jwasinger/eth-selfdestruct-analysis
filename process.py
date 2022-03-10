@@ -2,11 +2,8 @@ import itertools
 import functools
 import glob
 
-reincarnations = {}
-ephemerals = {}
-selfdestructed = set()
-created = set()
-total_lines = 0
+total_created = 0
+total_selfdestructed = 0
 
 def sort_tx_calls(calls):
     def sort_fn(x, y) -> int:
@@ -86,90 +83,99 @@ class MessageCall():
     def ToCSVLine(self):
         return "{},{},{},{},{},{},{}".format(self.tx_hash, self.tx_index, self.sender, self.sender, self.trace_id, self.call_type, self.type, self.status)
 
-tx_calls = []
-tx_created = set()
-tx_selfdestructed = set()
-tx_ephemerals = set() 
+class TransactionReader:
+    def __init__(self):
+        self.last_trace = None
 
-total_created = 0
+    def ReadNextTransaction(self, query_rows) -> [MessageCall]:
+        tx_traces = []
+        first_trace = None
+        if self.last_trace != None:
+            first_trace = self.last_trace
+            tx_traces.append(first_trace)
+            self.last_trace = None
 
-def process_transaction():
-    global tx_calls, tx_created, tx_selfdestructed, tx_ephemerals
-    global reincarnations, ephemerals, selfdestructed, created
-    global total_created
+        for row in query_rows:
+            row_trace = MessageCall.FromCSVLine(row)
 
-    # sort calls
-    if len(tx_calls) > 1:
-        tx_calls = sort_tx_calls(tx_calls)
+            if first_trace == None:
+                first_trace = row_trace
+                tx_traces.append(first_trace)
+                continue
+                
+            if first_trace.tx_hash != row_trace.tx_hash:
+                self.last_trace = row_trace
+                break
+            else:
+                tx_traces.append(row_trace)
 
-    for call in tx_calls:
-        if call.status == 0:
-            continue
+        if len(tx_traces) > 1:
+            tx_traces = sort_tx_calls(tx_traces)
 
-        if call.type == 'create':
-            # TODO what happens to self-destruct inside of create ?
-            tx_created.add(call.receiver)
-            total_created += 1
-        else: # call is selfdestruct
-            if not call.sender in tx_selfdestructed and not call.sender in tx_ephemerals:
-                if call.sender in tx_created:
-                    tx_ephemerals.add(call.sender)
-                    tx_created.remove(call.sender)
-                else:
-                    tx_selfdestructed.add(call.sender)
-    for address in tx_created:
-        if address in created:
-            import pdb; pdb.set_trace()
-            raise Exception("address created twice without being deleted: {0}".format(address))
-        if address in selfdestructed:
-            selfdestructed.remove(address)
-            if address in reincarnations:
-                reincarnations[address] += 1
-            else: 
-                reincarnations[address] = 1
-        created.add(address)
+        return tx_traces
 
-    for address in tx_selfdestructed:
-        if address == "0x82970e56d1b4aa2af1f90be3347afe87c8859d16":
-            import pdb; pdb.set_trace()
-            foo = 'bar'
+class AnalysisState:
+    def __init__(self):
+        self.ephemerals = {}
+        self.reincarnations = {}
+        self.selfdestructed = set()
+        self.created = set()
 
-        if address in selfdestructed:
-            import pdb; pdb.set_trace()
-            raise Exception("address selfdestructed twice without being resurected in-between: {0}".format(address))
+    def ApplyTransactionCalls(self, tx_calls: [MessageCall]):
+        global total_created
+        global total_selfdestructed
 
-        if address in created:
-            created.remove(address)
+        tx_created = set()
+        tx_selfdestructed = set()
+        tx_ephemerals = set() 
 
-        selfdestructed.add(address)
+        for call in tx_calls:
+            if call.status == 0:
+                continue
 
-    for address in tx_ephemerals:
-        if not address in ephemerals:
-            ephemerals[address] = 1
-        else:
-            ephemerals[address] += 1
+            if call.type == 'create':
+                total_created += 1
+                # TODO what happens to self-destruct inside of create ?
+                tx_created.add(call.receiver)
+            else: # call is selfdestruct
+                total_selfdestructed += 1
+                if not call.sender in tx_selfdestructed and not call.sender in tx_ephemerals:
+                    if call.sender in tx_created:
+                        tx_ephemerals.add(call.sender)
+                        tx_created.remove(call.sender)
+                    else:
+                        tx_selfdestructed.add(call.sender)
+        for address in tx_created:
+            if address in self.created:
+                import pdb; pdb.set_trace()
+                raise Exception("address created twice without being deleted: {0}".format(address))
+            if address in self.selfdestructed:
+                self.selfdestructed.remove(address)
+                if address in self.reincarnations:
+                    self.reincarnations[address] += 1
+                else: 
+                    self.reincarnations[address] = 1
+            self.created.add(address)
 
-    tx_calls = []
-    tx_created = set()
-    tx_selfdestructed = set()
-    tx_ephemerals = set() 
+        for address in tx_selfdestructed:
+            if address == "0x82970e56d1b4aa2af1f90be3347afe87c8859d16":
+                import pdb; pdb.set_trace()
+                foo = 'bar'
 
-def consume_line(line, start_block, break_block):
-    global last_call, created, ephemerals, reincarnations, selfdestructed, tx_calls
+            if address in self.selfdestructed:
+                import pdb; pdb.set_trace()
+                raise Exception("address selfdestructed twice without being resurected in-between: {0}".format(address))
 
-    call = MessageCall.FromCSVLine(line)
+            if address in self.created:
+                self.created.remove(address)
 
-    if call.block_number < start_block:
-        return False
-    if call.block_number >= break_block:
-        return True
+            self.selfdestructed.add(address)
 
-    if len(tx_calls) > 0 and tx_calls[0].tx_hash != call.tx_hash:
-        process_transaction()
-
-    tx_calls.append(call)
-
-    return False
+        for address in tx_ephemerals:
+            if not address in self.ephemerals:
+                self.ephemerals[address] = 1
+            else:
+                self.ephemerals[address] += 1
 
 progress_str = "_.."
 def advance_progress():
@@ -198,36 +204,40 @@ def main():
     input_files = sorted(glob.glob("data-traces/*.csv"))
     # input_files = ["data-traces/data-000000000181.csv", "data-traces/data-000000000182.csv"]
     # input_files = ["mystery2.csv"]
+    analysis_state = AnalysisState()
 
     for input_file in input_files:
         source_data_file = open(input_file, 'r')
         for line in source_data_file:
             break #read first line (header)
 
-        for line in source_data_file:
-            #process_txs_before_trace()
+        print(input_file)
+        print(total_created)
+        print(total_selfdestructed)
 
-            if consume_line(line, start_block, break_on_block_number):
+        while True:
+            t = TransactionReader()
+            tx_calls = t.ReadNextTransaction(source_data_file)
+            if len(tx_calls) == 0:
+                break
+
+            if tx_calls[0].block_number >= break_on_block_number:
                 should_break = True
                 break
 
+            analysis_state.ApplyTransactionCalls(tx_calls)
+
             counter += 1
-            if counter % 100000 == 0:
+            if counter % 1000 == 0:
                 print(advance_progress(), end="\r")
 
         if should_break:
             break
 
-        print(input_file)
-        total_incarnations = 0
-        for account, destructed_amt in reincarnations.items():
-            total_incarnations += destructed_amt
-        print("total contracts ={}".format(total_created))
 
     if not should_break:
         process_transaction()
 
-    import pdb; pdb.set_trace()
 
 if __name__ == "__main__":
     main()
