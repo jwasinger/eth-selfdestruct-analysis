@@ -44,6 +44,25 @@ class MessageCall():
         self.type = typ
         self.status = status
         self.call_type=call_type
+        self.call_depth = len(trace_id) - 1
+
+    @staticmethod
+    def FromQueryResultRow(row):
+        block_number = row['block_number']
+        tx_hash = row['transaction_hash']
+        tx_index = row['transaction_index']
+        trace_id = row['trace_id']
+        sender = row['from_address']
+        receiver = row['from_address']
+        
+        call_type = None
+        if row['trace_type'] == 'call':
+            call_type = row['call_type']
+
+        trace_type= row['trace_type']
+        status = row['status']
+        
+        return MessageCall(block_number, tx_hash, tx_index, trace_id, sender, receiver, trace_type, status, call_type)
 
     @staticmethod
     def FromCSVLine(s: str):
@@ -72,9 +91,12 @@ tx_created = set()
 tx_selfdestructed = set()
 tx_ephemerals = set() 
 
+total_created = 0
+
 def process_transaction():
     global tx_calls, tx_created, tx_selfdestructed, tx_ephemerals
     global reincarnations, ephemerals, selfdestructed, created
+    global total_created
 
     # sort calls
     if len(tx_calls) > 1:
@@ -87,6 +109,7 @@ def process_transaction():
         if call.type == 'create':
             # TODO what happens to self-destruct inside of create ?
             tx_created.add(call.receiver)
+            total_created += 1
         else: # call is selfdestruct
             if not call.sender in tx_selfdestructed and not call.sender in tx_ephemerals:
                 if call.sender in tx_created:
@@ -131,9 +154,6 @@ def process_transaction():
     tx_selfdestructed = set()
     tx_ephemerals = set() 
 
-def process_txs_before_trace(trace_line, start_block, break_block):
-    pass
-
 def consume_line(line, start_block, break_block):
     global last_call, created, ephemerals, reincarnations, selfdestructed, tx_calls
 
@@ -175,8 +195,8 @@ def main():
     should_break = False
 
     # txs_lines = open('tx-data.csv', 'r')
-    # input_files = sorted(glob.glob("data-traces/*.csv"))
-    input_files = ["data-traces/data-000000000181.csv", "data-traces/data-000000000182.csv"]
+    input_files = sorted(glob.glob("data-traces/*.csv"))
+    # input_files = ["data-traces/data-000000000181.csv", "data-traces/data-000000000182.csv"]
     # input_files = ["mystery2.csv"]
 
     for input_file in input_files:
@@ -202,7 +222,7 @@ def main():
         total_incarnations = 0
         for account, destructed_amt in reincarnations.items():
             total_incarnations += destructed_amt
-        print("total contracts ={}".format(total_incarnations + len(created)))
+        print("total contracts ={}".format(total_created))
 
     if not should_break:
         process_transaction()
