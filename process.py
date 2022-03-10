@@ -130,6 +130,7 @@ class AnalysisState:
         tx_ephemerals = set() 
 
         for call in tx_calls:
+
             if call.status == 0:
                 continue
 
@@ -158,10 +159,6 @@ class AnalysisState:
             self.created.add(address)
 
         for address in tx_selfdestructed:
-            if address == "0x82970e56d1b4aa2af1f90be3347afe87c8859d16":
-                import pdb; pdb.set_trace()
-                foo = 'bar'
-
             if address in self.selfdestructed:
                 import pdb; pdb.set_trace()
                 raise Exception("address selfdestructed twice without being resurected in-between: {0}".format(address))
@@ -206,6 +203,8 @@ def main():
     # input_files = ["mystery2.csv"]
     analysis_state = AnalysisState()
 
+    t = TransactionReader()
+
     for input_file in input_files:
         source_data_file = open(input_file, 'r')
         for line in source_data_file:
@@ -216,12 +215,12 @@ def main():
         print(total_selfdestructed)
 
         while True:
-            t = TransactionReader()
             tx_calls = t.ReadNextTransaction(source_data_file)
             if len(tx_calls) == 0:
                 break
 
             if tx_calls[0].block_number >= break_on_block_number:
+                import pdb; pdb.set_trace()
                 should_break = True
                 break
 
@@ -233,10 +232,6 @@ def main():
 
         if should_break:
             break
-
-
-    if not should_break:
-        process_transaction()
 
 
 if __name__ == "__main__":
