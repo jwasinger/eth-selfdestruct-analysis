@@ -121,6 +121,9 @@ class AnalysisState:
         self.selfdestructed = set()
         self.created = set()
 
+        # map of contract address -> address of contract that created it
+        self.creators = {}
+
     def ApplyTransactionCalls(self, tx_calls: [MessageCall]):
         global total_created
         global total_selfdestructed
@@ -136,8 +139,13 @@ class AnalysisState:
 
             if call.type == 'create':
                 total_created += 1
+                if call.receiver in tx_created:
+                    raise Exception("the same contract cannot be created twice during the same transaction")
+
                 # TODO what happens to self-destruct inside of create ?
                 tx_created.add(call.receiver)
+                if not call.receiver in self.creators:
+                    self.creators[call.receiver] = call.sender
             else: # call is selfdestruct
                 total_selfdestructed += 1
                 if not call.sender in tx_selfdestructed and not call.sender in tx_ephemerals:
@@ -146,6 +154,10 @@ class AnalysisState:
                         tx_created.remove(call.sender)
                     else:
                         tx_selfdestructed.add(call.sender)
+
+                #if call.sender in tx_ephemerals:
+                    #if not call.sender in self.creators:
+                        #raise Exception("ephemeral address should have been in created map")
         for address in tx_created:
             if address in self.created:
                 import pdb; pdb.set_trace()
@@ -165,6 +177,10 @@ class AnalysisState:
 
             if address in self.created:
                 self.created.remove(address)
+
+            #if not address in self.creators:
+                #raise Exception("selfdestructed address should have been in creators map")
+            #del self.creators[address]
 
             self.selfdestructed.add(address)
 
@@ -187,20 +203,21 @@ def advance_progress():
 
     return progress_str
 
-def main():
-    offset = 0
-
+def do_analysis():
     output_file = open('output.csv', 'w')
     counter = 0
-    # start_block=9000000
-    start_block= 0 # 9000000
-    break_on_block_number = 12799316
     should_break = False
 
-    # txs_lines = open('tx-data.csv', 'r')
+    #uncomment for post-london only (and comment the other settings below)
     input_files = sorted(glob.glob("data-traces/*.csv"))
-    # input_files = ["data-traces/data-000000000181.csv", "data-traces/data-000000000182.csv"]
-    # input_files = ["mystery2.csv"]
+    start_block= 12965000
+    break_on_block_number = 999999999999999999999999 
+
+    # settings to run against all chain history up to albert's analysis
+    #input_files = sorted(glob.glob("data-traces/*.csv"))
+    #start_block= 0
+    #break_on_block_number = 12799316
+
     analysis_state = AnalysisState()
 
     t = TransactionReader()
@@ -208,19 +225,19 @@ def main():
     for input_file in input_files:
         source_data_file = open(input_file, 'r')
         for line in source_data_file:
-            break #read first line (header)
+            break
 
-        print(input_file)
-        print(total_created)
-        print(total_selfdestructed)
+        print("analyzing {}".format(input_file))
 
         while True:
             tx_calls = t.ReadNextTransaction(source_data_file)
             if len(tx_calls) == 0:
                 break
 
+            if tx_calls[0].block_number < start_block:
+                continue
+
             if tx_calls[0].block_number >= break_on_block_number:
-                import pdb; pdb.set_trace()
                 should_break = True
                 break
 
@@ -233,6 +250,43 @@ def main():
         if should_break:
             break
 
+    return analysis_state
+
 
 if __name__ == "__main__":
-    main()
+    analysis_result = do_analysis()
+    ephemeral_creators = {}
+
+    for address, num_ephemerals in analysis_result.ephemerals.items():
+        if not address in analysis_result.creators:
+            raise Exception("missing creator for ephemeral address {}".format(address))
+
+        creator = analysis_result.creators[address]
+        if not creator in ephemeral_creators:
+            ephemeral_creators[creator] = num_ephemerals
+        else:
+            ephemeral_creators[creator] += num_ephemerals
+
+    reincarnated_creators = {}
+    for address, num_incarnations in analysis_result.reincarnations.items():
+        creator = ''
+        if not address in analysis_result.creators:
+            continue
+
+        creator = analysis_result.creators[address]
+        if not creator in reincarnated_creators:
+            reincarnated_creators[creator] = num_incarnations
+        else:
+            reincarnated_creators[creator] += num_incarnations
+
+    with open("analysis-results/creators-of-ephemeral-contracts.csv", "w") as f:
+        f.write("creator contract address, number of ephemeral contracts created\n")
+
+        for creator, num_ephemerals in ephemeral_creators.items():
+            f.write("{}, {}\n".format(creator, num_ephemerals))
+
+    with open("analysis-results/creators-of-redeployed-addrs.csv", "w") as f:
+        f.write("creator contract address, number of child contracts that were redeployed\n")
+
+        for creator, num_redeployed in reincarnated_creators.items():
+            f.write("{}, {}\n".format(creator, num_redeployed))
