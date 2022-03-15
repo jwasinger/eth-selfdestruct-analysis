@@ -31,7 +31,7 @@ def parse_trace_id(s: str):
     return parts
 
 class MessageCall():
-    def __init__(self, block_number, tx_hash, tx_index, trace_id, sender, receiver, typ, status, call_type):
+    def __init__(self, block_number, tx_hash, tx_index, trace_id, sender, receiver, typ, status, call_type, raw_line):
         self.block_number = block_number
         self.tx_hash = tx_hash
         self.tx_index = tx_index
@@ -42,6 +42,8 @@ class MessageCall():
         self.status = status
         self.call_type=call_type
         self.call_depth = len(trace_id) - 1
+        self.parent_call = None
+        self.raw_line = raw_line
 
     @staticmethod
     def FromQueryResultRow(row):
@@ -63,9 +65,9 @@ class MessageCall():
 
     @staticmethod
     def FromCSVLine(s: str):
-        parts = s.split(',')
+        parts = s.strip('\n').split(',')
 
-        if len(parts) != 10:
+        if len(parts) != 11:
             raise Exception("wrong length")
 
         block_number = int(parts[0])
@@ -76,18 +78,27 @@ class MessageCall():
         receiver = parts[6]
         typ = parts[7]
         status = int(parts[8])
-        calltype = None# parts[8]
+        calltype = parts[10]
 
         return MessageCall(block_number, tx_hash, tx_index, trace_id, sender, receiver, typ, status, calltype)
 
     def ToCSVLine(self):
         return "{},{},{},{},{},{},{}".format(self.tx_hash, self.tx_index, self.sender, self.sender, self.trace_id, self.call_type, self.type, self.status)
 
+def find_direct_parent(call, tx_calls) -> MessageCall:
+    return None
+    for c in reversed(tx_calls):
+        if c.call_depth == call.call_depth - 1 and c.trace_id == call.trace_id[:-1]:
+            return c
+
+    return None
+
 class TransactionReader:
     def __init__(self):
         self.last_trace = None
 
-    def ReadNextTransaction(self, query_rows) -> [MessageCall]:
+    # TODO this is broken in the case where a transaction straddles two files
+    def ReadNextTransaction(self, query_rows, link_txs=True) -> [MessageCall]:
         tx_traces = []
         first_trace = None
         if self.last_trace != None:
@@ -95,7 +106,7 @@ class TransactionReader:
             tx_traces.append(first_trace)
             self.last_trace = None
 
-        for row in query_rows:
+        for idx, row in enumerate(query_rows):
             row_trace = MessageCall.FromCSVLine(row)
 
             if first_trace == None:
@@ -106,8 +117,10 @@ class TransactionReader:
             if first_trace.tx_hash != row_trace.tx_hash:
                 self.last_trace = row_trace
                 break
-            else:
-                tx_traces.append(row_trace)
+
+            if link_txs:
+                row_trace.parent_call = find_direct_parent(row_trace, tx_traces)
+            tx_traces.append(row_trace)
 
         if len(tx_traces) > 1:
             tx_traces = sort_tx_calls(tx_traces)
@@ -138,6 +151,10 @@ class AnalysisState:
                 continue
 
             if call.type == 'create':
+                if call.parent_call != None:
+                    if call.parent_call.type == 'delegatecall' or call.parent_call.type == 'callcode':
+                        import pdb; pdb.set_trace()
+
                 total_created += 1
                 if call.receiver in tx_created:
                     raise Exception("the same contract cannot be created twice during the same transaction")
@@ -146,7 +163,7 @@ class AnalysisState:
                 tx_created.add(call.receiver)
                 if not call.receiver in self.creators:
                     self.creators[call.receiver] = call.sender
-            else: # call is selfdestruct
+            elif call.type == 'suicide': # call is selfdestruct
                 total_selfdestructed += 1
                 if not call.sender in tx_selfdestructed and not call.sender in tx_ephemerals:
                     if call.sender in tx_created:
@@ -155,9 +172,20 @@ class AnalysisState:
                     else:
                         tx_selfdestructed.add(call.sender)
 
-                #if call.sender in tx_ephemerals:
-                    #if not call.sender in self.creators:
-                        #raise Exception("ephemeral address should have been in created map")
+                if call.sender in tx_ephemerals:
+                    if not call.sender in self.creators:
+                        raise Exception("ephemeral address should have been in created map")
+            elif call.type == 'call':
+                if call.call_type == 'delegatecall':
+                    pass
+                elif call.call_type == 'callcode':
+                    pass
+                else:
+                    import pdb; pdb.set_trace()
+                    raise Exception("unexpected call type {}".format(call.call_type))
+            elif call.type == None:
+                import pdb; pdb.set_trace()
+                raise Exception("unexpected trace type {}".format(call.type))
         for address in tx_created:
             if address in self.created:
                 import pdb; pdb.set_trace()
@@ -178,9 +206,9 @@ class AnalysisState:
             if address in self.created:
                 self.created.remove(address)
 
-            #if not address in self.creators:
-                #raise Exception("selfdestructed address should have been in creators map")
-            #del self.creators[address]
+            if not address in self.creators:
+                raise Exception("selfdestructed address should have been in creators map")
+            del self.creators[address]
 
             self.selfdestructed.add(address)
 
@@ -209,14 +237,14 @@ def do_analysis():
     should_break = False
 
     #uncomment for post-london only (and comment the other settings below)
-    input_files = sorted(glob.glob("data-traces/*.csv"))
-    start_block= 12965000
-    break_on_block_number = 999999999999999999999999 
+    #input_files = sorted(glob.glob("data-traces/*.csv"))
+    #start_block= 12965000
+    #break_on_block_number = 999999999999999999999999 
 
     # settings to run against all chain history up to albert's analysis
-    #input_files = sorted(glob.glob("data-traces/*.csv"))
-    #start_block= 0
-    #break_on_block_number = 12799316
+    input_files = sorted(glob.glob("data-traces/*.csv"))
+    start_block= 0
+    break_on_block_number = 12799316
 
     analysis_state = AnalysisState()
 
@@ -257,6 +285,7 @@ if __name__ == "__main__":
     analysis_result = do_analysis()
     ephemeral_creators = {}
 
+    import pdb; pdb.set_trace()
     for address, num_ephemerals in analysis_result.ephemerals.items():
         if not address in analysis_result.creators:
             raise Exception("missing creator for ephemeral address {}".format(address))
@@ -279,6 +308,7 @@ if __name__ == "__main__":
         else:
             reincarnated_creators[creator] += num_incarnations
 
+    import pdb; pdb.est_trace()
     with open("analysis-results/creators-of-ephemeral-contracts.csv", "w") as f:
         f.write("creator contract address, number of ephemeral contracts created\n")
 
