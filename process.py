@@ -187,8 +187,8 @@ class AnalysisState:
             if address in self.created:
                 self.created.remove(address)
 
-            if not address in self.creators:
-                raise Exception("selfdestructed address should have been in creators map")
+            #if not address in self.creators:
+                #raise Exception("selfdestructed address should have been in creators map")
             #del self.creators[address]
 
             self.selfdestructed.add(address)
