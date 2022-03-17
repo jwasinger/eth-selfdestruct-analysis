@@ -7,7 +7,7 @@ def get_starting_block_number(file_name):
             break # ignore header
 
         for line in f:
-            block_number = int(line.split(',')[0])
+            block_number = int(line.split(',')[3])
             return block_number
 
 data_files = glob.glob("data-traces/*.csv")

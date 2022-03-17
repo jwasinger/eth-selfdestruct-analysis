@@ -31,7 +31,7 @@ def parse_trace_id(s: str):
     return parts
 
 class MessageCall():
-    def __init__(self, block_number, tx_hash, tx_index, trace_id, sender, receiver, typ, status, call_type, raw_line):
+    def __init__(self, block_number, tx_hash, tx_index, trace_id, sender, receiver, typ, status, call_type):
         self.block_number = block_number
         self.tx_hash = tx_hash
         self.tx_index = tx_index
@@ -43,42 +43,23 @@ class MessageCall():
         self.call_type=call_type
         self.call_depth = len(trace_id) - 1
         self.parent_call = None
-        self.raw_line = raw_line
-
-    @staticmethod
-    def FromQueryResultRow(row):
-        block_number = row['block_number']
-        tx_hash = row['transaction_hash']
-        tx_index = row['transaction_index']
-        trace_id = row['trace_id']
-        sender = row['from_address']
-        receiver = row['from_address']
-        
-        call_type = None
-        if row['trace_type'] == 'call':
-            call_type = row['call_type']
-
-        trace_type= row['trace_type']
-        status = row['status']
-        
-        return MessageCall(block_number, tx_hash, tx_index, trace_id, sender, receiver, trace_type, status, call_type)
 
     @staticmethod
     def FromCSVLine(s: str):
         parts = s.strip('\n').split(',')
 
-        if len(parts) != 11:
+        if len(parts) != 10:
             raise Exception("wrong length")
 
-        block_number = int(parts[0])
-        tx_hash = parts[2]
-        tx_index = int(parts[3])
-        trace_id = parse_trace_id(parts[4])
+        block_number = int(parts[3])
+        tx_hash = parts[1]
+        tx_index = int(parts[4])
+        trace_id = parse_trace_id(parts[2])
         sender = parts[5]
         receiver = parts[6]
         typ = parts[7]
-        status = int(parts[8])
-        calltype = parts[10]
+        status = int(parts[9])
+        calltype = parts[8]
 
         return MessageCall(block_number, tx_hash, tx_index, trace_id, sender, receiver, typ, status, calltype)
 
@@ -208,7 +189,7 @@ class AnalysisState:
 
             if not address in self.creators:
                 raise Exception("selfdestructed address should have been in creators map")
-            del self.creators[address]
+            #del self.creators[address]
 
             self.selfdestructed.add(address)
 
@@ -236,15 +217,16 @@ def do_analysis():
     counter = 0
     should_break = False
 
-    #uncomment for post-london only (and comment the other settings below)
-    #input_files = sorted(glob.glob("data-traces/*.csv"))
-    #start_block= 12965000
-    #break_on_block_number = 999999999999999999999999 
-
-    # settings to run against all chain history up to albert's analysis
+    # run post-london only
     input_files = sorted(glob.glob("data-traces/*.csv"))
-    start_block= 0
-    break_on_block_number = 12799316
+    start_block= 12965000
+    break_on_block_number = 999999999999999999999999 
+
+    # settings to run against all chain history up to previous analysis:
+    # https://nbviewer.org/github/adompeldorius/selfdestruct-analysis/blob/main/analysis.ipynb
+    #input_files = sorted(glob.glob("data-traces-all/*.csv"))
+    #start_block= 0
+    #break_on_block_number = 12799316
 
     analysis_state = AnalysisState()
 
@@ -285,7 +267,6 @@ if __name__ == "__main__":
     analysis_result = do_analysis()
     ephemeral_creators = {}
 
-    import pdb; pdb.set_trace()
     for address, num_ephemerals in analysis_result.ephemerals.items():
         if not address in analysis_result.creators:
             raise Exception("missing creator for ephemeral address {}".format(address))
@@ -300,7 +281,8 @@ if __name__ == "__main__":
     for address, num_incarnations in analysis_result.reincarnations.items():
         creator = ''
         if not address in analysis_result.creators:
-            continue
+            import pdb; pdb.set_trace()
+            fuck = True
 
         creator = analysis_result.creators[address]
         if not creator in reincarnated_creators:
@@ -308,7 +290,7 @@ if __name__ == "__main__":
         else:
             reincarnated_creators[creator] += num_incarnations
 
-    import pdb; pdb.est_trace()
+    import pdb; pdb.set_trace()
     with open("analysis-results/creators-of-ephemeral-contracts.csv", "w") as f:
         f.write("creator contract address, number of ephemeral contracts created\n")
 
