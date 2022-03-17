@@ -109,7 +109,9 @@ class TransactionReader:
         return tx_traces
 
 class AnalysisState:
-    def __init__(self):
+    def __init__(self, start_block):
+        self.start_block = start_block
+
         self.ephemerals = {}
         self.reincarnations = {}
         self.selfdestructed = set()
@@ -127,15 +129,10 @@ class AnalysisState:
         tx_ephemerals = set() 
 
         for call in tx_calls:
-
             if call.status == 0:
                 continue
 
             if call.type == 'create':
-                if call.parent_call != None:
-                    if call.parent_call.type == 'delegatecall' or call.parent_call.type == 'callcode':
-                        import pdb; pdb.set_trace()
-
                 total_created += 1
                 if call.receiver in tx_created:
                     raise Exception("the same contract cannot be created twice during the same transaction")
@@ -162,26 +159,24 @@ class AnalysisState:
                 elif call.call_type == 'callcode':
                     pass
                 else:
-                    import pdb; pdb.set_trace()
                     raise Exception("unexpected call type {}".format(call.call_type))
             elif call.type == None:
-                import pdb; pdb.set_trace()
                 raise Exception("unexpected trace type {}".format(call.type))
+
         for address in tx_created:
             if address in self.created:
-                import pdb; pdb.set_trace()
                 raise Exception("address created twice without being deleted: {0}".format(address))
             if address in self.selfdestructed:
                 self.selfdestructed.remove(address)
-                if address in self.reincarnations:
-                    self.reincarnations[address] += 1
-                else: 
-                    self.reincarnations[address] = 1
+                if self.start_block <= tx_calls[0].block_number:
+                    if address in self.reincarnations:
+                        self.reincarnations[address] += 1
+                    else: 
+                        self.reincarnations[address] = 1
             self.created.add(address)
 
         for address in tx_selfdestructed:
             if address in self.selfdestructed:
-                import pdb; pdb.set_trace()
                 raise Exception("address selfdestructed twice without being resurected in-between: {0}".format(address))
 
             if address in self.created:
@@ -193,11 +188,12 @@ class AnalysisState:
 
             self.selfdestructed.add(address)
 
-        for address in tx_ephemerals:
-            if not address in self.ephemerals:
-                self.ephemerals[address] = 1
-            else:
-                self.ephemerals[address] += 1
+        if self.start_block <= tx_calls[0].block_number:
+            for address in tx_ephemerals:
+                if not address in self.ephemerals:
+                    self.ephemerals[address] = 1
+                else:
+                    self.ephemerals[address] += 1
 
 progress_str = "_.."
 def advance_progress():
@@ -215,12 +211,12 @@ def advance_progress():
 def do_analysis():
     output_file = open('output.csv', 'w')
     counter = 0
-    should_break = False
+    done = False
 
     # run post-london only
     input_files = sorted(glob.glob("data-traces/*.csv"))
     start_block= 12965000
-    break_on_block_number = 999999999999999999999999 
+    end_block = 999999999999999999999999 
 
     # settings to run against all chain history up to previous analysis:
     # https://nbviewer.org/github/adompeldorius/selfdestruct-analysis/blob/main/analysis.ipynb
@@ -228,7 +224,7 @@ def do_analysis():
     #start_block= 0
     #break_on_block_number = 12799316
 
-    analysis_state = AnalysisState()
+    analysis_state = AnalysisState(start_block)
 
     t = TransactionReader()
 
@@ -244,11 +240,8 @@ def do_analysis():
             if len(tx_calls) == 0:
                 break
 
-            if tx_calls[0].block_number < start_block:
-                continue
-
-            if tx_calls[0].block_number >= break_on_block_number:
-                should_break = True
+            if tx_calls[0].block_number > end_block:
+                done = True
                 break
 
             analysis_state.ApplyTransactionCalls(tx_calls)
@@ -257,7 +250,7 @@ def do_analysis():
             if counter % 1000 == 0:
                 print(advance_progress(), end="\r")
 
-        if should_break:
+        if done:
             break
 
     return analysis_state
@@ -281,8 +274,7 @@ if __name__ == "__main__":
     for address, num_incarnations in analysis_result.reincarnations.items():
         creator = ''
         if not address in analysis_result.creators:
-            import pdb; pdb.set_trace()
-            fuck = True
+            raise Exception("address should be in creators")
 
         creator = analysis_result.creators[address]
         if not creator in reincarnated_creators:
