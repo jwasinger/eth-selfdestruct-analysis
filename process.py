@@ -173,6 +173,7 @@ class AnalysisState:
                         self.reincarnations[address] += 1
                     else: 
                         self.reincarnations[address] = 1
+
             self.created.add(address)
 
         for address in tx_selfdestructed:
@@ -208,21 +209,11 @@ def advance_progress():
 
     return progress_str
 
-def do_analysis():
-    output_file = open('output.csv', 'w')
+def do_analysis(start_block, end_block):
     counter = 0
     done = False
 
-    # run post-london only
     input_files = sorted(glob.glob("data-traces/*.csv"))
-    start_block= 12965000
-    end_block = 999999999999999999999999 
-
-    # settings to run against all chain history up to previous analysis:
-    # https://nbviewer.org/github/adompeldorius/selfdestruct-analysis/blob/main/analysis.ipynb
-    #input_files = sorted(glob.glob("data-traces-all/*.csv"))
-    #start_block= 0
-    #break_on_block_number = 12799316
 
     analysis_state = AnalysisState(start_block)
 
@@ -255,9 +246,7 @@ def do_analysis():
 
     return analysis_state
 
-
-if __name__ == "__main__":
-    analysis_result = do_analysis()
+def save_analysis(analysis_result: AnalysisState, ephemerals_file_path: str, creators_of_redeployed_file_path: str, redeployed_file_path: str):
     ephemeral_creators = {}
 
     for address, num_ephemerals in analysis_result.ephemerals.items():
@@ -278,19 +267,36 @@ if __name__ == "__main__":
 
         creator = analysis_result.creators[address]
         if not creator in reincarnated_creators:
-            reincarnated_creators[creator] = num_incarnations
+            reincarnated_creators[creator] = 1
         else:
-            reincarnated_creators[creator] += num_incarnations
+            reincarnated_creators[creator] += 1
 
-    import pdb; pdb.set_trace()
-    with open("analysis-results/creators-of-ephemeral-contracts.csv", "w") as f:
+    with open(ephemerals_file_path, "w") as f:
         f.write("creator contract address, number of ephemeral contracts created\n")
 
         for creator, num_ephemerals in ephemeral_creators.items():
             f.write("{}, {}\n".format(creator, num_ephemerals))
 
-    with open("analysis-results/creators-of-redeployed-addrs.csv", "w") as f:
+    with open(creators_of_redeployed_file_path, "w") as f:
         f.write("creator contract address, number of child contracts that were redeployed\n")
 
         for creator, num_redeployed in reincarnated_creators.items():
             f.write("{}, {}\n".format(creator, num_redeployed))
+
+    with open(redeployed_file_path, 'w') as f:
+        f.write("redeployed address, number of redeployments\n")
+
+        for address, num_incarnations in analysis_result.reincarnations.items():
+            f.write("{}, {}\n".format(address, num_incarnations))
+
+def analysis1():
+    analysis_genesis_to_x = do_analysis(0, 12799316)
+    save_analysis(analysis_genesis_to_x, "analysis-results/genesis-to-12799316/creators-of-ephemeral-contracts.csv", "analysis-results/genesis-to-12799316/creators-of-redeployed-addrs.csv", "analysis-results/genesis-to-12799316/redeployed-addrs.csv")
+
+def analysis2():
+    london_to_present = do_analysis(12965000, 999999999999999999999999)
+    save_analysis(london_to_present, "analysis-results/london-to-present/creators-of-ephemeral-contracts.csv", "analysis-results/london-to-present/creators-of-redeployed-addrs.csv", "analysis-results/london-to-present/redeployed-addrs.csv")
+
+if __name__ == "__main__":
+    analysis1()
+    analysis2()
