@@ -136,8 +136,6 @@ class AnalysisState:
                 total_created += 1
                 if call.receiver in tx_created:
                     raise Exception("the same contract cannot be created twice during the same transaction")
-
-                # TODO what happens to self-destruct inside of create ?
                 tx_created.add(call.receiver)
                 if not call.receiver in self.creators:
                     self.creators[call.receiver] = call.sender
@@ -183,10 +181,6 @@ class AnalysisState:
             if address in self.created:
                 self.created.remove(address)
 
-            #if not address in self.creators:
-                #raise Exception("selfdestructed address should have been in creators map")
-            #del self.creators[address]
-
             self.selfdestructed.add(address)
 
         if self.start_block <= tx_calls[0].block_number:
@@ -213,7 +207,7 @@ def do_analysis(start_block, end_block):
     counter = 0
     done = False
 
-    input_files = sorted(glob.glob("data-traces/*.csv"))
+    input_files = sorted(glob.glob("data-traces-small/*.csv"))
 
     analysis_state = AnalysisState(start_block)
 
@@ -246,8 +240,9 @@ def do_analysis(start_block, end_block):
 
     return analysis_state
 
-def save_analysis(analysis_result: AnalysisState, ephemerals_file_path: str, creators_of_redeployed_file_path: str, redeployed_file_path: str):
+def save_analysis(analysis_result: AnalysisState, ephemerals_file_path: str, creators_of_redeployed_file_path: str, redeployed_file_path: str, ephemerals_incarnations_path: str):
     ephemeral_creators = {}
+    ephemeral_creators_which_reuse = set()
 
     for address, num_ephemerals in analysis_result.ephemerals.items():
         if not address in analysis_result.creators:
@@ -259,11 +254,18 @@ def save_analysis(analysis_result: AnalysisState, ephemerals_file_path: str, cre
         else:
             ephemeral_creators[creator] += num_ephemerals
 
+        if num_ephemerals > 1:
+            ephemeral_creators_which_reuse.add(creator)
+
     reincarnated_creators = {}
     for address, num_incarnations in analysis_result.reincarnations.items():
         creator = ''
         if not address in analysis_result.creators:
             raise Exception("address should be in creators")
+
+        if address in analysis_result.ephemerals:
+            import pdb; pdb.set_trace()
+            foo = 'bar'
 
         creator = analysis_result.creators[address]
         if not creator in reincarnated_creators:
@@ -289,14 +291,20 @@ def save_analysis(analysis_result: AnalysisState, ephemerals_file_path: str, cre
         for address, num_incarnations in analysis_result.reincarnations.items():
             f.write("{}, {}\n".format(address, num_incarnations))
 
+    with open(ephemerals_incarnations_path, 'w') as f:
+        f.write("contract address, number of existing ephemeral contracts that were created\n")
+
+        for address in ephemeral_creators_which_reuse:
+            f.write("{}\n".format(address))
+
 def analysis1():
     analysis_genesis_to_x = do_analysis(0, 12799316)
     save_analysis(analysis_genesis_to_x, "analysis-results/genesis-to-12799316/creators-of-ephemeral-contracts.csv", "analysis-results/genesis-to-12799316/creators-of-redeployed-addrs.csv", "analysis-results/genesis-to-12799316/redeployed-addrs.csv")
 
 def analysis2():
     london_to_present = do_analysis(12965000, 999999999999999999999999)
-    save_analysis(london_to_present, "analysis-results/london-to-present/creators-of-ephemeral-contracts.csv", "analysis-results/london-to-present/creators-of-redeployed-addrs.csv", "analysis-results/london-to-present/redeployed-addrs.csv")
+    save_analysis(london_to_present, "analysis-results/london-to-present/creators-of-ephemeral-contracts.csv", "analysis-results/london-to-present/creators-of-redeployed-addrs.csv", "analysis-results/london-to-present/redeployed-addrs.csv", "analysis-results/london-to-present/ephemeral-creators-which-reuse-addrs.csv")
 
 if __name__ == "__main__":
-    analysis1()
+    #analysis1()
     analysis2()
