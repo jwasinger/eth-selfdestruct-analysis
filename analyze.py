@@ -24,14 +24,14 @@ def sort_tx_calls(calls):
 def parse_trace_id(s: str):
     parts = s.split('_')[2:]
     parts = [part for part in parts if part != '']
-    parts = [int(part) for part in parts]
+    parts = [0] + [int(part) for part in parts]
 
     if len(parts) == 0:
         parts = [0]
     return parts
 
 class MessageCall():
-    def __init__(self, block_number, tx_hash, tx_index, trace_id, sender, receiver, typ, status, call_type):
+    def __init__(self, block_number, tx_hash, tx_index, trace_id, sender, receiver, typ, status, call_type, value):
         self.block_number = block_number
         self.tx_hash = tx_hash
         self.tx_index = tx_index
@@ -43,12 +43,13 @@ class MessageCall():
         self.call_type=call_type
         self.call_depth = len(trace_id) - 1
         self.parent_call = None
+        self.value = value
 
     @staticmethod
     def FromCSVLine(s: str):
         parts = s.strip('\n').split(',')
 
-        if len(parts) != 10:
+        if len(parts) != 11:
             raise Exception("wrong length")
 
         block_number = int(parts[3])
@@ -60,8 +61,9 @@ class MessageCall():
         typ = parts[7]
         status = int(parts[9])
         calltype = parts[8]
+        value = parts[10]
 
-        return MessageCall(block_number, tx_hash, tx_index, trace_id, sender, receiver, typ, status, calltype)
+        return MessageCall(block_number, tx_hash, tx_index, trace_id, sender, receiver, typ, status, calltype, value)
 
     def ToCSVLine(self):
         return "{},{},{},{},{},{},{}".format(self.tx_hash, self.tx_index, self.sender, self.sender, self.trace_id, self.call_type, self.type, self.status)
@@ -131,6 +133,10 @@ class AnalysisState:
         for call in tx_calls:
             if call.status == 0:
                 continue
+
+            if call.tx_hash == "0x499e07618ac40dc7b188d0a0c92f3d8d9139bbdc203fa431e6806a32d90edef0":
+                import pdb; pdb.set_trace()
+                foo = 'bar'
 
             if call.type == 'create':
                 total_created += 1
@@ -207,7 +213,7 @@ def do_analysis(start_block, end_block):
     counter = 0
     done = False
 
-    input_files = sorted(glob.glob("data-traces-small/*.csv"))
+    input_files = sorted(glob.glob("data-traces-small-new/*.csv"))
 
     analysis_state = AnalysisState(start_block)
 
@@ -276,25 +282,25 @@ def save_analysis(analysis_result: AnalysisState, ephemerals_file_path: str, cre
     with open(ephemerals_file_path, "w") as f:
         f.write("creator contract address, number of ephemeral contracts created\n")
 
-        for creator, num_ephemerals in ephemeral_creators.items():
+        for creator, num_ephemerals in sorted(ephemeral_creators.items()):
             f.write("{}, {}\n".format(creator, num_ephemerals))
 
     with open(creators_of_redeployed_file_path, "w") as f:
         f.write("creator contract address, number of child contracts that were redeployed\n")
 
-        for creator, num_redeployed in reincarnated_creators.items():
+        for creator, num_redeployed in sorted(reincarnated_creators.items()):
             f.write("{}, {}\n".format(creator, num_redeployed))
 
     with open(redeployed_file_path, 'w') as f:
         f.write("redeployed address, number of redeployments\n")
 
-        for address, num_incarnations in analysis_result.reincarnations.items():
+        for address, num_incarnations in sorted(analysis_result.reincarnations.items()):
             f.write("{}, {}\n".format(address, num_incarnations))
 
     with open(ephemerals_incarnations_path, 'w') as f:
         f.write("contract address, number of existing ephemeral contracts that were created\n")
 
-        for address in ephemeral_creators_which_reuse:
+        for address in sorted(ephemeral_creators_which_reuse):
             f.write("{}\n".format(address))
 
 def analysis1():
