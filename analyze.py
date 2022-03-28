@@ -213,7 +213,7 @@ def do_analysis(start_block, end_block):
     counter = 0
     done = False
 
-    input_files = sorted(glob.glob("data-traces-small-new/*.csv"))
+    input_files = sorted(glob.glob("data-traces/*.csv"))
 
     analysis_state = AnalysisState(start_block)
 
@@ -305,12 +305,12 @@ def save_analysis(analysis_result: AnalysisState, ephemerals_file_path: str, cre
 
 def analysis1():
     analysis_genesis_to_x = do_analysis(0, 12799316)
-    save_analysis(analysis_genesis_to_x, "analysis-results/genesis-to-12799316/creators-of-ephemeral-contracts.csv", "analysis-results/genesis-to-12799316/creators-of-redeployed-addrs.csv", "analysis-results/genesis-to-12799316/redeployed-addrs.csv")
+    save_analysis(analysis_genesis_to_x, "analysis-results/genesis-to-12799316/creators-of-ephemeral-contracts.csv", "analysis-results/genesis-to-12799316/creators-of-redeployed-addrs.csv", "analysis-results/genesis-to-12799316/redeployed-addrs.csv", "analysis-results/genesis-to-12799316/ephemeral-creators-which-reuse-addrs.csv")
 
 def analysis2():
     london_to_present = do_analysis(12965000, 999999999999999999999999)
     save_analysis(london_to_present, "analysis-results/london-to-present/creators-of-ephemeral-contracts.csv", "analysis-results/london-to-present/creators-of-redeployed-addrs.csv", "analysis-results/london-to-present/redeployed-addrs.csv", "analysis-results/london-to-present/ephemeral-creators-which-reuse-addrs.csv")
 
 if __name__ == "__main__":
-    #analysis1()
+    analysis1()
     analysis2()
