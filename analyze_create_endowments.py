@@ -23,10 +23,10 @@ def main():
             if line.strip('\n') in reused_ephemeral_addrs_creators:
                 raise Exception("shouldn't happen")
 
-            reused_ephemeral_addrs_creators.add(parts[0]) 
+            reused_ephemeral_addrs_creators.add(line.strip('\n')) 
 
     creator_value_endowed = {}
-    input_files = sorted(glob.glob("data-traces-small-new/*.csv"))
+    input_files = sorted(glob.glob("data-traces/*.csv"))
     t = TransactionReader()
     done = False
 
@@ -64,7 +64,11 @@ def main():
         if done:
             break
 
-    import pdb; pdb.set_trace()
+    nonzero_endowments = [(item[0], item[1] / 10e17) for item in creator_value_endowed.items() if item[1] != 0]
+    with open("analysis-results/london-to-present/creation-amounts-endowed.csv","w") as f:
+        f.write("account which created a contract at an address that had been previously used, total ether amount endowed in all creations by account\n")
+        for addr, amt in nonzero_endowments:
+            f.write("{}, {}\n".format(addr, amt))
 
 if __name__ == "__main__":
     main()
