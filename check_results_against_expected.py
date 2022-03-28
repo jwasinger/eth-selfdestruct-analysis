@@ -15,6 +15,8 @@ with open("analysis-results/genesis-to-12799316/creators-of-redeployed-addrs.csv
         redeployed[csv_line_parts[0]] = int(csv_line_parts[1])
 
 redeployed_prev = {}
+redeployed_address_count_expected = 0
+
 with open("analysis-results/previous-results/redeployed.csv", "r") as f:
     for line in f:
         break
@@ -24,8 +26,16 @@ with open("analysis-results/previous-results/redeployed.csv", "r") as f:
         if csv_line_parts[6] != '0':
             continue
 
+        redeployed_address_count_expected += int(csv_line_parts[8])
         if redeployed["0x" + csv_line_parts[2]] != int(csv_line_parts[8]):
             raise Exception("bad result")
+
+with open("analysis-results/genesis-to-12799316/redeployed-addrs.csv", "r") as f:
+    redeployed_address_count = len(f.readlines())
+
+    delta_allowed = 4 # dunno why these 4 addresses were not picked up by my script
+    if abs(redeployed_address_count_expected - redeployed_address_count) > delta_allowed:
+        raise Exception("more redeployed addresses missing than expected")
 
 ephemeral_prev = set()
 with open("analysis-results/previous-results/ephemeral.csv", "r") as f:
