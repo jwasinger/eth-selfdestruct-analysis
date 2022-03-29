@@ -3,15 +3,15 @@ https://github.com/ethereum/EIPs/pull/4758 is a proposal which changes the behav
 
 There are two main use-cases for selfdestruct after the London hard fork:
 * an address calculated by `create2` can have contracts deployed, selfdestructed and redeployed (with new bytecode).  This serves as a way to update a contract.
-* contracts can be created, used, and selfdestructed within the same transaction.
+* contracts can be created, used, and selfdestructed within the same transaction.  These are referred to as ephemeral contracts.
 
 In both cases, it can result that an address will be destroyed and created one or more times.  This is referred to as a `re-inited` address.
 
 ## Results
 
-From Genesis to block 12,799,316, there were 11304 contracts which redeployed, 69102 addresses which were re-inited one or more times.
+From Genesis to block 12,799,316 (the time period looked at in the [previous analysis work](https://nbviewer.org/github/adompeldorius/selfdestruct-analysis/blob/main/analysis.ipynb)), there were 11304 contracts which created and redeployed child contracts, 69102 addresses which were re-inited one or more times.
 
-Since London (block 12,965,000), 34 contracts redeployed child contracts and 238 addresses were re-inited.  The 12 re-inited addresses with nonzero Ether balances have 4430 Ether together.  Two of the creators of addresses that selfdestructed have Ether/tokens with a total value of ~$55000 USD (as of March 25th, 2022).  None of these have contract source code on Etherscan.
+Since London (block 12,965,000), 34 contracts redeployed child contracts, 233 contracts created ephemeral contracts, and 238 addresses saw contract re-inits.
 It's difficult to determine with certainty, every single address that would be at risk of losing funds with the change of `SELFDESTRUCT` to `SENDALL`.  None of the contracts which are creators of re-inited contracts, or any re-inited contracts have their source verified on Etherscan.  However, looking at the balances of potentially-affected addresses reveals that most of the Ether holdings are concentrated in a few addresses.
 
 Here are twenty addresses with the highest Ether balances:
