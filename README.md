@@ -12,9 +12,9 @@ Addresses where contracts where destroyed and then recreated (whether as a resul
 From Genesis to block 12,799,316 (the time period looked at in the [previous analysis work](https://nbviewer.org/github/adompeldorius/selfdestruct-analysis/blob/main/analysis.ipynb)), there were 11304 contracts which created and redeployed child contracts, 69102 addresses which were re-inited one or more times.
 
 Since London (block 12,965,000), 34 contracts redeployed child contracts, 233 contracts created ephemeral contracts, and 238 addresses saw contract re-inits.
-It's difficult to determine with certainty, every single address that would be at risk of losing funds with the change of `SELFDESTRUCT` to `SENDALL`.  None of the contracts which are creators of re-inited contracts, or any re-inited contracts have their source verified on Etherscan.  However, looking at the balances of potentially-affected addresses reveals that most of the Ether holdings are concentrated in a few addresses.
+It's difficult to determine with certainty, every single address that would be at risk of losing funds with the change of `SELFDESTRUCT` to `SENDALL`.  None of the contracts which are creators of re-inited contracts, or any re-inited contracts have their source verified on Etherscan.
 
-Here are twenty addresses with the highest Ether balances:
+However, looking at the balances of potentially-affected addresses reveals that most of the Ether holdings are concentrated in a few addresses.  Here are twenty addresses with the highest Ether balances:
 
 | Address | Ether Balance |
 | --------------------------- | --- | 
