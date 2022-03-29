@@ -312,5 +312,4 @@ def analysis2():
     save_analysis(london_to_present, "analysis-results/london-to-present/creators-of-ephemeral-contracts.csv", "analysis-results/london-to-present/creators-of-redeployed-addrs.csv", "analysis-results/london-to-present/redeployed-addrs.csv", "analysis-results/london-to-present/ephemeral-creators-which-reuse-addrs.csv")
 
 if __name__ == "__main__":
-    analysis1()
     analysis2()

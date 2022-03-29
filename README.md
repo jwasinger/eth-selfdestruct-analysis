@@ -8,30 +8,62 @@ There are two main use-cases for selfdestruct after the London hard fork:
 
 Both of these use-cases would become non-viable with the replacement of `SELFDESTRUCT` with `SENDALL`.
 
-
 From Genesis to block 12799316, there were 11304 contracts which redeployed child contracts, 69102 addresses which had one or more re-inits.
 
 Since London, 34 contracts redeployed child contracts and 238 addresses have re-inits.  The 12 re-inited addresses with nonzero balances have 4430 Ether together.  Two of the creators of addresses that selfdestructed have Ether/tokens with a total value of ~$55000 USD (as of March 25th, 2022).  None of these have contract source code on Etherscan.
 
-It's difficult to determine every single address that would be at risk of lost funds because many selfdestructable contracts and creators of these contracts are not verified on Etherscan.  However, ether/ERC20 balances reveal high concentration of affected funds in whale accounts:
+It's difficult to determine with certainty, every single address that would be at risk of losing funds with the change of `SELFDESTRUCT` to `SENDALL`.  None of the contracts which are creators of re-inited contracts, or any re-inited contracts have their source verified on Etherscan.  However, looking at the balances of potentially-affected addresses reveals that most of the Ether holdings are concentrated in a few addresses.
 
-| Address with re-init(s) | Ether Balance |
+Here are twenty addresses with the highest Ether balances:
+
+| Address | Ether Balance |
 ---------------------------
-|0x0000000099cb7fc48a935bceb9f05bbae54e8987| 12.15342213200995|
-|0x000000000000006f6502b7f2bbac8c30a3f67e9a| 3324.4140871710733|
-|0x00000000032962b51589768828ad878876299e14| 3.051639286062525|
-|0x000000e1fddf4fe15db5f23ae3ee83c6a11e8dd1| 0.01|
-|0x000000000035b5e5ad9019092c665357240f594e| 35.824890136908934|
-|0xf2d47e78dea8e0f96902c85902323d2a2012b0c0| 3.3781819040953978|
-|0xa1006d0051a35b0000f961a8000000009ea8d2db| 4.120442258e-09|
-|0x00000000003503bad07dc2c8027052c5880d46cc| 0.05058310914906227|
-|0x01ff6318440f7d5553a82294d78262d5f5084eff| 2.63155283e-09|
-|0x499dd900f800fd0a2ed300006000a57f00fa009b| 0.18037058919772106|
-|0xb3fcd22ffd34d75c979d49e2e5fb3a3405644831| 0.3936493854356113|
-|0x0000000000007f150bd6f54c40a34d7c3d5e9f56| 1050.7502029949273|
+|0x000000000000006f6502b7f2bbac8c30a3f67e9a| 3324.420061694295|
+|0x66be1bc6c6af47900bbd4f3711801be6c2c6cb32| 1901.0612243907497|
+|0x0000000000007f150bd6f54c40a34d7c3d5e9f56| 1052.0346555690187|
+|0x8bc110db7029197c3621bea8092ab1996d5dd7be| 522.381685684114|
+|0x30b84dc1a46c58e0bcfe6aa9f74042dff159277a| 140.56124777053802|
+|0x36049d479a97cde1fc6e2a5d2cae30b666ebf92b| 98.89128076172763|
+|0x3dca07e16b2becd3eb76a9f9ce240b525451f887| 84.90239709803015|
+|0x9998569436887938287223231949815647232697| 84.00239483914334|
+|0xbe4a176b0d18f1e158cc1a833383212f68327b51| 58.12295457143919|
+|0x000000000035b5e5ad9019092c665357240f594e| 33.67848284726566|
+|0x983b45f89198b3356e81bc09a0fa1933bbea1d76| 28.036818265914945|
+|0x5b1b0349b3a668c75cc868801a39430684e3f36a| 19.98447425583028|
+|0x206548d60d891aefc16cf899af75e3527148941a| 13.571287045047718|
+|0x0000000099cb7fc48a935bceb9f05bbae54e8987| 11.07584061230294|
+|0xd412054cca18a61278ced6f674a526a6940ebd84| 7.271706101417892|
+|0xafe87013dc96ede1e116a288d80fcaa0effe5fe5| 5.5812284324692545|
+|0xa95baf5ef81707aa56625a9302a7f7d3aaf12ef4| 5.509614527057623|
+|0x2222222229b89c7844f19ef503c4dc503be47f84| 4.784371587066971|
+|0x8e2dc6d9318eedda52335afe8ef4ff1cf3883cae| 4.348183572554626|
+|0x6b2b69c6e5490be701abfbfa440174f808c1a33b| 4.045736144113548|
 
-**TODO** include deployers in this chart, sort the chart descending by balance
+It seems likely that every potentially-affected address with large Ether/ERC20 holdings will need to be analyzed to determine if it could be broken.
 
-**TODO** USD value of balances for important ERC20 tokens in potentially-affected accounts
+Some next steps to proceed with the analysis are:
+* Identifying contracts from the list of potentially-affected which hold large/valuable ERC20 balances.
+* Identifying currently-existing selfdestructable contracts which were deployed via `create2` and determining of these and their creators, which have large ERC20/Ether holdings.
+
+Once there is a full list of potentially-affected contracts, per-contract analysis can be done for contracts with large holdings.
 
 ## Instructions for reproducing the results (TODO)
+
+The first step is to retrieve the raw dataset of contract creation / selfdestruct internal transaction traces from the BigQuery Ethereum dataset with the following query:
+
+```
+select block_hash, transaction_hash,  trace_id, block_number, transaction_index, from_address, to_address, trace_type, call_type, status, value from `bigquery-public-data.crypto_ethereum.traces` 
+    where (trace_type='suicide' or trace_type = 'create')
+    order by block_number asc, transaction_index asc
+```
+
+The data is rather large and must be exported as multiple csv files to a GCS bucket.  The naming format of the files should be `data-*.csv` where `*` is a number.  Download these csvs to a folder `data-traces` placed in the top-level directory of this repo.  Execute the script `rename-files.py` to rename the downloaded files so that their data is ordered properly (i.e. the layout of the data in `data-0001.csv`, `data-0002.csv`, ... is chronological.  when the files are downloaded from the storage bucket, the numerical prefix assigned to a given csv is somewhat random).
+
+Execute the analysis by running `analyze.py`.
+
+The analysis script produces several results:
+* `creators-of-redeployed-addrs.csv` - list of any contract that created an child contract which was redeployed.
+* `creators-of-ephemeral-contracts.csv` - list of accounts which created ephemeral contracts.
+* `redeployed-addrs.csv` - a list of addresses which had re-inits.
+
+To get a list of Ether balances for all accounts in these three csvs, execute `query_balances_for_creators_and_reinited_addrs.py`.
