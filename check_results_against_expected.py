@@ -50,7 +50,7 @@ with open("analysis-results/previous-results/ephemeral.csv", "r") as f:
             ephemeral_prev.add("0x"+parts[2])
 
 ephemeral = set() 
-with open("analysis-results/genesis-to-12799316/creators-of-ephemeral-contracts.csv", 'r') as f:
+with open("analysis-results/genesis-to-12799316/ephemeral-addrs.csv", 'r') as f:
     for line in f:
         parts = line.split(',')
         if parts[0] in ephemeral:

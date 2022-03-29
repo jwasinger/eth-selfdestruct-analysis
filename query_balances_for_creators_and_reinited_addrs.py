@@ -37,6 +37,8 @@ with open("analysis-results/london-to-present/redeployed-addrs.csv", "r") as f:
 
         reinited_addresses.add(parts[0])
 
+import pdb; pdb.set_trace()
+
 target_addrs = list(creators_of_ephemeral_contracts) + list(creators_of_redeployed_addrs) + list(reinited_addresses)
 target_addrs = ",".join(["\"" + addr + "\"" for addr in target_addrs])
 query = query_template.format(target_addrs)

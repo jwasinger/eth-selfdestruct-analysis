@@ -133,11 +133,6 @@ class AnalysisState:
         for call in tx_calls:
             if call.status == 0:
                 continue
-
-            if call.tx_hash == "0x499e07618ac40dc7b188d0a0c92f3d8d9139bbdc203fa431e6806a32d90edef0":
-                import pdb; pdb.set_trace()
-                foo = 'bar'
-
             if call.type == 'create':
                 total_created += 1
                 if call.receiver in tx_created:
@@ -213,7 +208,7 @@ def do_analysis(start_block, end_block):
     counter = 0
     done = False
 
-    input_files = sorted(glob.glob("data-traces/*.csv"))
+    input_files = sorted(glob.glob("data-traces-small-new/*.csv"))
 
     analysis_state = AnalysisState(start_block)
 
@@ -246,7 +241,7 @@ def do_analysis(start_block, end_block):
 
     return analysis_state
 
-def save_analysis(analysis_result: AnalysisState, ephemerals_file_path: str, creators_of_redeployed_file_path: str, redeployed_file_path: str, ephemerals_incarnations_path: str):
+def save_analysis(analysis_result: AnalysisState, ephemerals_file_path: str, creators_of_redeployed_file_path: str, redeployed_file_path: str, ephemerals_incarnations_path: str, ephemerals_creators_path: str):
     ephemeral_creators = {}
     ephemeral_creators_which_reuse = set()
 
@@ -303,13 +298,19 @@ def save_analysis(analysis_result: AnalysisState, ephemerals_file_path: str, cre
         for address in sorted(ephemeral_creators_which_reuse):
             f.write("{}\n".format(address))
 
+    with open(ephemerals_creators_path, 'w') as f:
+        f.write("contract address that created one-or-more ephemeral contracts\n")
+
+        for created_address in analysis_result.ephemerals:
+            f.write(analysis_result.creators[created_address] + "\n")
+
 def analysis1():
     analysis_genesis_to_x = do_analysis(0, 12799316)
-    save_analysis(analysis_genesis_to_x, "analysis-results/genesis-to-12799316/creators-of-ephemeral-contracts.csv", "analysis-results/genesis-to-12799316/creators-of-redeployed-addrs.csv", "analysis-results/genesis-to-12799316/redeployed-addrs.csv", "analysis-results/genesis-to-12799316/ephemeral-creators-which-reuse-addrs.csv")
+    save_analysis(analysis_genesis_to_x, "analysis-results/genesis-to-12799316/creators-of-ephemeral-contracts.csv", "analysis-results/genesis-to-12799316/creators-of-redeployed-addrs.csv", "analysis-results/genesis-to-12799316/redeployed-addrs.csv", "analysis-results/genesis-to-12799316/ephemeral-addrs.csv", "analysis-results/genesis-to-12799316/ephemeral-creators-addrs.csv")
 
 def analysis2():
     london_to_present = do_analysis(12965000, 999999999999999999999999)
-    save_analysis(london_to_present, "analysis-results/london-to-present/creators-of-ephemeral-contracts.csv", "analysis-results/london-to-present/creators-of-redeployed-addrs.csv", "analysis-results/london-to-present/redeployed-addrs.csv", "analysis-results/london-to-present/ephemeral-creators-which-reuse-addrs.csv")
+    save_analysis(london_to_present, "analysis-results/london-to-present/creators-of-ephemeral-contracts.csv", "analysis-results/london-to-present/creators-of-redeployed-addrs.csv", "analysis-results/london-to-present/redeployed-addrs.csv", "analysis-results/london-to-present/ephemeral-addrs.csv", "analysis-results/genesis-to-12799316/ephemeral-creators-addrs.csv")
 
 if __name__ == "__main__":
     analysis2()
