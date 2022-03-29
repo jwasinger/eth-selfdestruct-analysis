@@ -5,7 +5,7 @@ There are two main use-cases for selfdestruct after the London hard fork:
 * an address calculated by `create2` can have contracts deployed, selfdestructed and redeployed (with new bytecode).  This serves as a way to update a contract.
 * contracts can be created, used, and selfdestructed within the same transaction.  These are referred to as ephemeral contracts.
 
-In both cases, it can result that an address will be destroyed and created one or more times.  This is referred to as a `re-inited` address.
+Addresses where contracts where destroyed and then recreated (whether as a result of a contract redeployment or ephemeral contracts making use of the same address more than once) are referred to as a re-inited addresses.
 
 ## Results
 
