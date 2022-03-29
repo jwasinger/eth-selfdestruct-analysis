@@ -13,40 +13,36 @@ From genesis to block 12,799,316 (the time period looked at in the [previous ana
 
 Since London (block 12,965,000), 34 contracts redeployed child contracts, 233 contracts created ephemeral contracts at 97266 addresses, 235 addresses had multiple non-ephemeral contracts deployed at them.
 
-It is difficult to determine with certainty, every single address that would be at risk of losing funds with the change of `SELFDESTRUCT` to `SENDALL`.  None of the contracts which are creators of re-inited contracts, or any re-inited contracts have their source verified on Etherscan.  However, looking at the balances of potentially-affected addresses reveals that most of the Ether holdings are concentrated in a few addresses.
-
 There are 83 re-inited addresses which had nonzero ether balances.  Here are twenty addresses with the highest Ether balances:
 
-| Address | Ether Balance |
-| --------------------------- | --- | 
-|0x000000000000006f6502b7f2bbac8c30a3f67e9a| 3324.420061694295|
-|0x66be1bc6c6af47900bbd4f3711801be6c2c6cb32| 1901.0612243907497|
-|0x0000000000007f150bd6f54c40a34d7c3d5e9f56| 1052.0346555690187|
-|0x8bc110db7029197c3621bea8092ab1996d5dd7be| 522.381685684114|
-|0x30b84dc1a46c58e0bcfe6aa9f74042dff159277a| 140.56124777053802|
-|0x36049d479a97cde1fc6e2a5d2cae30b666ebf92b| 98.89128076172763|
-|0x3dca07e16b2becd3eb76a9f9ce240b525451f887| 84.90239709803015|
-|0x9998569436887938287223231949815647232697| 84.00239483914334|
-|0xbe4a176b0d18f1e158cc1a833383212f68327b51| 58.12295457143919|
-|0x000000000035b5e5ad9019092c665357240f594e| 33.67848284726566|
-|0x983b45f89198b3356e81bc09a0fa1933bbea1d76| 28.036818265914945|
-|0x5b1b0349b3a668c75cc868801a39430684e3f36a| 19.98447425583028|
-|0x206548d60d891aefc16cf899af75e3527148941a| 13.571287045047718|
-|0x0000000099cb7fc48a935bceb9f05bbae54e8987| 11.07584061230294|
-|0xd412054cca18a61278ced6f674a526a6940ebd84| 7.271706101417892|
-|0xafe87013dc96ede1e116a288d80fcaa0effe5fe5| 5.5812284324692545|
-|0xa95baf5ef81707aa56625a9302a7f7d3aaf12ef4| 5.509614527057623|
-|0x2222222229b89c7844f19ef503c4dc503be47f84| 4.784371587066971|
-|0x8e2dc6d9318eedda52335afe8ef4ff1cf3883cae| 4.348183572554626|
-|0x6b2b69c6e5490be701abfbfa440174f808c1a33b| 4.045736144113548|
+| Address | Ether Balance | Creator |
+| --------------------------- | --- | ---- |
+|0x000000000000006f6502b7f2bbac8c30a3f67e9a| 3324.420061694295| | 
+|0x66be1bc6c6af47900bbd4f3711801be6c2c6cb32| 1901.0612243907497| [Third Floor Mutual](https://3fmutual.com/) |
+|0x0000000000007f150bd6f54c40a34d7c3d5e9f56| 1052.0346555690187| | 
+|0x8bc110db7029197c3621bea8092ab1996d5dd7be| 522.381685684114| | 
+|0x30b84dc1a46c58e0bcfe6aa9f74042dff159277a| 140.56124777053802| |
+|0x36049d479a97cde1fc6e2a5d2cae30b666ebf92b| 98.89128076172763| [Pine Finance](pine.finance) |
+|0x3dca07e16b2becd3eb76a9f9ce240b525451f887| 84.90239709803015| |
+|0x9998569436887938287223231949815647232697| 84.00239483914334| | 
+|0xbe4a176b0d18f1e158cc1a833383212f68327b51| 58.12295457143919| |
+|0x000000000035b5e5ad9019092c665357240f594e| 33.67848284726566| |
+|0x983b45f89198b3356e81bc09a0fa1933bbea1d76| 28.036818265914945| |
+|0x5b1b0349b3a668c75cc868801a39430684e3f36a| 19.98447425583028| |
+|0x206548d60d891aefc16cf899af75e3527148941a| 13.571287045047718| |
+|0x0000000099cb7fc48a935bceb9f05bbae54e8987| 11.07584061230294| |
+|0xd412054cca18a61278ced6f674a526a6940ebd84| 7.271706101417892| [Pine Finance][pine.finance]
+|0xafe87013dc96ede1e116a288d80fcaa0effe5fe5| 5.5812284324692545| |
+|0xa95baf5ef81707aa56625a9302a7f7d3aaf12ef4| 5.509614527057623| |
+|0x2222222229b89c7844f19ef503c4dc503be47f84| 4.784371587066971| |
+|0x8e2dc6d9318eedda52335afe8ef4ff1cf3883cae| 4.348183572554626| |
+|0x6b2b69c6e5490be701abfbfa440174f808c1a33b| 4.045736144113548| |
 
-It seems likely that every potentially-affected address with large Ether/ERC20 holdings will need to be analyzed to determine if it could be broken.
-
-Some potential next steps to proceed with the analysis are:
+Some potential next steps for proceeding with the analysis are:
 * Identifying contracts from the list of potentially-affected which hold large/valuable ERC20 balances.
 * Identifying currently-existing selfdestructable contracts which were deployed via `CREATE2` and determining of these and their creators, which have large ERC20/Ether holdings.
 
-Once there is a full list of potentially-affected contracts, analysis can be done on the bytecodes of contracts with large holdings.
+Once there is a full list of potentially-affected contracts, further examination the solidity source or bytecode of these contracts will be useful.
 
 ## Running the Analysis
 
