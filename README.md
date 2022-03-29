@@ -58,11 +58,11 @@ The dataset is somewhat large (30gb) and must be exported as multiple csv files 
 
 Execute the analysis by running `analyze.py`.
 
-The analysis script produces several results:
+The analysis script producess these files as results:
 * `creators-of-redeployed-addrs.csv` - list of any contract that created an child contract which was redeployed.
 * `creators-of-ephemeral-contracts.csv` - list of accounts which created ephemeral contracts.
 * `redeployed-addrs.csv` - a list of addresses which had contract redeployments.
 * `ephemeral-addrs.csv` - a list of addresses where ephemeral contracts executed.
 * `ephemeral-creators-which-reuse-addrs.csv` - creators of ephemeral contracts that executed at re-inited addresses.
 
-To get a list of Ether balances for all accounts in these three csvs, execute `query_balances_for_creators_and_reinited_addrs.py`.
+To get a list of Ether balances for all accounts in these files, execute `query_balances_for_creators_and_reinited_addrs.py`.
