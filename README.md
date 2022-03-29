@@ -11,7 +11,7 @@ Addresses where contracts were destroyed and then recreated (whether as a result
 
 From genesis to block 12,799,316 (the time period looked at in the [previous analysis work](https://nbviewer.org/github/adompeldorius/selfdestruct-analysis/blob/main/analysis.ipynb)), there were 11304 contracts which created and redeployed child contracts, 69102 addresses which were re-inited one or more times.
 
-Since London (block 12,965,000), 34 contracts redeployed child contracts, 233 contracts created ephemeral contracts at 97266 addresses, 235 addresses had multiple non-ephemeral contracts deployed at them.
+Since London (block 12,965,000), 34 contracts redeployed child contracts, 233 contracts created ephemeral contracts at 97266 addresses, 235 addresses had multiple non-ephemeral contracts deployed at them.  1279 addresses where ephemeral contracts executed were re-inited.
 
 Of all re-inited addresses and creators of re-inited addresses, 83 had nonzero Ether balances.  Here are twenty addresses with the largest balances:
 
