@@ -31,18 +31,18 @@ Of all adddresses which where creators of contracts at re-inited addresses, or r
 |0x5b1b0349b3a668c75cc868801a39430684e3f36a| 19.98447425583028| |
 |0x206548d60d891aefc16cf899af75e3527148941a| 13.571287045047718| |
 |0x0000000099cb7fc48a935bceb9f05bbae54e8987| 11.07584061230294| |
-|0xd412054cca18a61278ced6f674a526a6940ebd84| 7.271706101417892| [Pine Finance][pine.finance]
+|0xd412054cca18a61278ced6f674a526a6940ebd84| 7.271706101417892| [Pine Finance](pine.finance)
 |0xafe87013dc96ede1e116a288d80fcaa0effe5fe5| 5.5812284324692545| |
 |0xa95baf5ef81707aa56625a9302a7f7d3aaf12ef4| 5.509614527057623| |
 |0x2222222229b89c7844f19ef503c4dc503be47f84| 4.784371587066971| |
 |0x8e2dc6d9318eedda52335afe8ef4ff1cf3883cae| 4.348183572554626| |
 |0x6b2b69c6e5490be701abfbfa440174f808c1a33b| 4.045736144113548| |
 
-Some potential next steps for proceeding with the analysis are:
+Some next steps for the analysis are:
 * Identifying contracts from the list of potentially-affected which hold large/valuable ERC20 balances.
 * Identifying currently-existing selfdestructable contracts which were deployed via `CREATE2` and determining of these and their creators, which have large ERC20/Ether holdings.
 
-Once there is a full list of potentially-affected contracts, further examination the solidity source or bytecode of these contracts will be useful.
+Once there is a full list of potentially-affected contracts, further examination the solidity source or bytecode of these contracts can be useful.
 
 ## Running the Analysis
 
