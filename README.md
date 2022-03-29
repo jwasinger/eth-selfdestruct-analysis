@@ -46,7 +46,7 @@ Some potential next steps to proceed with the analysis are:
 * Identifying contracts from the list of potentially-affected which hold large/valuable ERC20 balances.
 * Identifying currently-existing selfdestructable contracts which were deployed via `create2` and determining of these and their creators, which have large ERC20/Ether holdings.
 
-Once there is a full list of potentially-affected contracts, per-contract analysis can be done for contracts with large holdings.
+Once there is a full list of potentially-affected contracts, analysis can be done on the bytecodes of contracts with large holdings.
 
 ## Running the Analysis
 
@@ -58,7 +58,7 @@ select block_hash, transaction_hash,  trace_id, block_number, transaction_index,
     order by block_number asc, transaction_index asc
 ```
 
-The data is rather large and must be exported as multiple csv files to a GCS bucket.  When exporting from BigQuery to GCS, choose `data-*.csv` as the naming format for the exported files.  Download these csvs to a folder `data-traces` placed in the top-level directory of this repo.  Execute the script `rename-files.py` to rename the downloaded files so that their data is ordered properly (i.e. the layout of the data in `data-0001.csv`, `data-0002.csv`, ... is chronological.  when the files are downloaded from the storage bucket, the numerical prefix assigned to a given csv is somewhat random).
+The dataset is somewhat large (30gb) and must be exported as multiple csv files to a GCS bucket.  When exporting from BigQuery to GCS, choose `data-*.csv` as the naming format for the exported files.  Download these csvs to a folder `data-traces` placed in the top-level directory of this repo.  Execute the script `rename-files.py` to rename the downloaded files so that their data is ordered properly (i.e. the layout of the data in `data-0001.csv`, `data-0002.csv`, ... is chronological.  when the files are downloaded from the storage bucket, the numerical prefix assigned to a given csv is somewhat random).
 
 Execute the analysis by running `analyze.py`.
 
