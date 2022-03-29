@@ -13,7 +13,7 @@ From genesis to block 12,799,316 (the time period looked at in the [previous ana
 
 Since London (block 12,965,000), 34 contracts redeployed child contracts, 233 contracts created ephemeral contracts at 97266 addresses, 235 addresses had multiple non-ephemeral contracts deployed at them.  1279 addresses where ephemeral contracts executed were re-inited.
 
-Of all re-inited addresses and creators of re-inited addresses, 14 had nonzero Ether balances.  Here are twenty addresses with the largest balances:
+Of all re-inited addresses and creators of re-inited addresses, 14 had nonzero Ether balances.  Here are the ten addresses with the largest balances:
 
 | Address | Ether balance | Creator of re-inited contract | re-inited contract | Project |
 | --------------------------- | --- | ---- | -- | -- |
