@@ -9,6 +9,7 @@ SELECT address, eth_balance FROM `bigquery-public-data.crypto_ethereum.balances`
 creators_of_ephemeral_contracts = set()
 creators_of_redeployed_addrs = set()
 reinited_addresses = set()
+ephemeral_addrs = set() # TODO check these should all be zero
 
 with open("analysis-results/london-to-present/creators-of-ephemeral-contracts.csv", "r") as f:
     lines = f.readlines()[1:]
@@ -37,17 +38,30 @@ with open("analysis-results/london-to-present/redeployed-addrs.csv", "r") as f:
 
         reinited_addresses.add(parts[0])
 
-import pdb; pdb.set_trace()
+with open("analysis-results/london-to-present/ephemeral-addrs.csv", "r") as f:
+    lines = f.readlines()[1:]
+    for line in lines:
+        addr = line.strip(",").strip("\n")
+        if addr in ephemeral_addrs:
+            raise Exception("repeated address")
 
-target_addrs = list(creators_of_ephemeral_contracts) + list(creators_of_redeployed_addrs) + list(reinited_addresses)
-target_addrs = ",".join(["\"" + addr + "\"" for addr in target_addrs])
-query = query_template.format(target_addrs)
+        ephemeral_addrs.add(addr)
 
-# Construct a BigQuery client object.
-client = bigquery.Client()
+target_addrs = list(creators_of_ephemeral_contracts) + list(creators_of_redeployed_addrs) + list(reinited_addresses) + list(ephemeral_addrs)
 
+balances = {}
 
-query_job = client.query(query)  # Make an API request.
+for i in range(0, len(target_addrs), 20000):
+    query_addrs = ",".join(["\"" + addr + "\"" for addr in target_addrs[i:i+1000]])
+    query = query_template.format(query_addrs)
 
-for row in query_job:
-    print("{}, {}".format(row['address'], int(row['eth_balance']) / 10e17))
+    # Construct a BigQuery client object.
+    client = bigquery.Client()
+
+    print("query for accounts {}..{}".format(i, i + 20000))
+    query_job = client.query(query)  # Make an API request.
+
+    for row in query_job:
+        balances[row['address']] = int(row['eth_balance']) / 10e17
+
+print("\n".join(["{},{}".format(addr, balance) for addr, balance in balances.items()]))

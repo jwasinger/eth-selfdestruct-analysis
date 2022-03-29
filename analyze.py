@@ -208,7 +208,7 @@ def do_analysis(start_block, end_block):
     counter = 0
     done = False
 
-    input_files = sorted(glob.glob("data-traces-small-new/*.csv"))
+    input_files = sorted(glob.glob("data-traces/*.csv"))
 
     analysis_state = AnalysisState(start_block)
 
@@ -241,7 +241,7 @@ def do_analysis(start_block, end_block):
 
     return analysis_state
 
-def save_analysis(analysis_result: AnalysisState, ephemerals_file_path: str, creators_of_redeployed_file_path: str, redeployed_file_path: str, ephemerals_incarnations_path: str, ephemerals_creators_path: str):
+def save_analysis(analysis_result: AnalysisState, creators_of_redeployed_file_path: str, redeployed_file_path: str, ephemerals_creators_path: str, ephemerals_addrs_path: str):
     ephemeral_creators = {}
     ephemeral_creators_which_reuse = set()
 
@@ -274,7 +274,7 @@ def save_analysis(analysis_result: AnalysisState, ephemerals_file_path: str, cre
         else:
             reincarnated_creators[creator] += 1
 
-    with open(ephemerals_file_path, "w") as f:
+    with open(ephemerals_creators_path, "w") as f:
         f.write("creator contract address, number of ephemeral contracts created\n")
 
         for creator, num_ephemerals in sorted(ephemeral_creators.items()):
@@ -292,25 +292,19 @@ def save_analysis(analysis_result: AnalysisState, ephemerals_file_path: str, cre
         for address, num_incarnations in sorted(analysis_result.reincarnations.items()):
             f.write("{}, {}\n".format(address, num_incarnations))
 
-    with open(ephemerals_incarnations_path, 'w') as f:
-        f.write("contract address, number of existing ephemeral contracts that were created\n")
+    with open(ephemerals_addrs_path, 'w') as f:
+        f.write("contract address\n")
 
-        for address in sorted(ephemeral_creators_which_reuse):
-            f.write("{}\n".format(address))
-
-    with open(ephemerals_creators_path, 'w') as f:
-        f.write("contract address that created one-or-more ephemeral contracts\n")
-
-        for created_address in analysis_result.ephemerals:
-            f.write(analysis_result.creators[created_address] + "\n")
+        for item in sorted(analysis_result.ephemerals.items(), key=lambda x: x[0]):
+            f.write("{}\n".format(item[0]))
 
 def analysis1():
     analysis_genesis_to_x = do_analysis(0, 12799316)
-    save_analysis(analysis_genesis_to_x, "analysis-results/genesis-to-12799316/creators-of-ephemeral-contracts.csv", "analysis-results/genesis-to-12799316/creators-of-redeployed-addrs.csv", "analysis-results/genesis-to-12799316/redeployed-addrs.csv", "analysis-results/genesis-to-12799316/ephemeral-addrs.csv", "analysis-results/genesis-to-12799316/ephemeral-creators-addrs.csv")
+    save_analysis(analysis_genesis_to_x, "analysis-results/genesis-to-12799316/creators-of-redeployed-addrs.csv", "analysis-results/genesis-to-12799316/redeployed-addrs.csv", "analysis-results/genesis-to-12799316/creators-of-ephemeral-contracts.csv", "analysis-results/genesis-to-12799316/ephemeral-addrs.csv")
 
 def analysis2():
     london_to_present = do_analysis(12965000, 999999999999999999999999)
-    save_analysis(london_to_present, "analysis-results/london-to-present/creators-of-ephemeral-contracts.csv", "analysis-results/london-to-present/creators-of-redeployed-addrs.csv", "analysis-results/london-to-present/redeployed-addrs.csv", "analysis-results/london-to-present/ephemeral-addrs.csv", "analysis-results/genesis-to-12799316/ephemeral-creators-addrs.csv")
+    save_analysis(london_to_present, "analysis-results/london-to-present/creators-of-redeployed-addrs.csv", "analysis-results/london-to-present/redeployed-addrs.csv", "analysis-results/london-to-present/creators-of-ephemeral-contracts.csv", "analysis-results/london-to-present/ephemeral-addrs.csv")
 
 if __name__ == "__main__":
     analysis2()
