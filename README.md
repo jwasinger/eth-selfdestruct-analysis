@@ -17,7 +17,7 @@ It's difficult to determine with certainty, every single address that would be a
 Here are twenty addresses with the highest Ether balances:
 
 | Address | Ether Balance |
----------------------------
+| --------------------------- | --- | 
 |0x000000000000006f6502b7f2bbac8c30a3f67e9a| 3324.420061694295|
 |0x66be1bc6c6af47900bbd4f3711801be6c2c6cb32| 1901.0612243907497|
 |0x0000000000007f150bd6f54c40a34d7c3d5e9f56| 1052.0346555690187|
@@ -57,7 +57,7 @@ select block_hash, transaction_hash,  trace_id, block_number, transaction_index,
     order by block_number asc, transaction_index asc
 ```
 
-The data is rather large and must be exported as multiple csv files to a GCS bucket.  The naming format of the files should be `data-*.csv` where `*` is a number.  Download these csvs to a folder `data-traces` placed in the top-level directory of this repo.  Execute the script `rename-files.py` to rename the downloaded files so that their data is ordered properly (i.e. the layout of the data in `data-0001.csv`, `data-0002.csv`, ... is chronological.  when the files are downloaded from the storage bucket, the numerical prefix assigned to a given csv is somewhat random).
+The data is rather large and must be exported as multiple csv files to a GCS bucket.  When exporting from BigQuery to GCS, choose `data-*.csv` as the naming format for the exported files.  Download these csvs to a folder `data-traces` placed in the top-level directory of this repo.  Execute the script `rename-files.py` to rename the downloaded files so that their data is ordered properly (i.e. the layout of the data in `data-0001.csv`, `data-0002.csv`, ... is chronological.  when the files are downloaded from the storage bucket, the numerical prefix assigned to a given csv is somewhat random).
 
 Execute the analysis by running `analyze.py`.
 
