@@ -1,17 +1,17 @@
-# Analysis of selfdestruct usage on Ethereum after the London hard fork
+# Analysis of Selfdestruct Usage on Ethereum after the London Hard Fork
 https://github.com/ethereum/EIPs/pull/4758 is a proposal which changes the behavior of the EVM `SELFDESTRUCT` opcode and renames it to `SENDALL`.  `SENDALL` removes the contract destruction aspect of `SELFDESTRUCT` while retaining the behavior which instantly transfers the balance of the executing contract to a target recipient.
 
 There are two main use-cases for selfdestruct after the London hard fork:
-
 * an address calculated by `create2` can have contracts deployed, selfdestructed and redeployed (with new bytecode).  This serves as a way to update a contract.
 * contracts can be created, used, and selfdestructed within the same transaction.
 
-Both of these use-cases would become non-viable with the replacement of `SELFDESTRUCT` with `SENDALL`.
+In both cases, it can result that an address will be destroyed and created one or more times.  This is referred to as a `re-inited` address.
 
-From Genesis to block 12799316, there were 11304 contracts which redeployed child contracts, 69102 addresses which had one or more re-inits.
+## Results
 
-Since London, 34 contracts redeployed child contracts and 238 addresses have re-inits.  The 12 re-inited addresses with nonzero balances have 4430 Ether together.  Two of the creators of addresses that selfdestructed have Ether/tokens with a total value of ~$55000 USD (as of March 25th, 2022).  None of these have contract source code on Etherscan.
+From Genesis to block 12,799,316, there were 11304 contracts which redeployed, 69102 addresses which were re-inited one or more times.
 
+Since London (block 12,965,000), 34 contracts redeployed child contracts and 238 addresses were re-inited.  The 12 re-inited addresses with nonzero Ether balances have 4430 Ether together.  Two of the creators of addresses that selfdestructed have Ether/tokens with a total value of ~$55000 USD (as of March 25th, 2022).  None of these have contract source code on Etherscan.
 It's difficult to determine with certainty, every single address that would be at risk of losing funds with the change of `SELFDESTRUCT` to `SENDALL`.  None of the contracts which are creators of re-inited contracts, or any re-inited contracts have their source verified on Etherscan.  However, looking at the balances of potentially-affected addresses reveals that most of the Ether holdings are concentrated in a few addresses.
 
 Here are twenty addresses with the highest Ether balances:
@@ -47,7 +47,7 @@ Some next steps to proceed with the analysis are:
 
 Once there is a full list of potentially-affected contracts, per-contract analysis can be done for contracts with large holdings.
 
-## Instructions for reproducing the results (TODO)
+## Running the Analysis
 
 The first step is to retrieve the raw dataset of contract creation / selfdestruct internal transaction traces from the BigQuery Ethereum dataset with the following query:
 
