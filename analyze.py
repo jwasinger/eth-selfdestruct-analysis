@@ -296,7 +296,7 @@ def save_analysis(analysis_result: AnalysisState, creators_of_redeployed_file_pa
         f.write("contract address\n")
 
         for item in sorted(analysis_result.ephemerals.items(), key=lambda x: x[0]):
-            f.write("{}\n".format(item[0]))
+            f.write("{},{}\n".format(item[0], item[1]))
 
 def analysis1():
     analysis_genesis_to_x = do_analysis(0, 12799316)
