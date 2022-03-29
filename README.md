@@ -1,5 +1,5 @@
 # Analysis of Selfdestruct Usage on Ethereum after the London Hard Fork
-https://github.com/ethereum/EIPs/pull/4758 is a proposal which changes the behavior of the EVM `SELFDESTRUCT` opcode and renames it to `SENDALL`.  `SENDALL` removes the contract destruction aspect of `SELFDESTRUCT` while retaining the behavior which instantly transfers the balance of the executing contract to a target recipient.
+https://github.com/ethereum/EIPs/pull/4758 is a proposal which changes the behavior of the EVM `SELFDESTRUCT` opcode and renames it to `SENDALL`.  `SENDALL` removes the contract destruction aspect of `SELFDESTRUCT` while retaining the behavior which instantly the balance of the executing contract to a target recipient, and immediately returns execution to the calling contract.
 
 There are two main use-cases for selfdestruct after the London hard fork:
 * an address calculated by `create2` can have contracts deployed, selfdestructed and redeployed (with new bytecode).  This serves as a way to update a contract.
