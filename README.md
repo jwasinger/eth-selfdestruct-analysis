@@ -13,7 +13,7 @@ From genesis to block 12,799,316 (the time period looked at in the [previous ana
 
 Since London (block 12,965,000), 34 contracts redeployed child contracts, 233 contracts created ephemeral contracts at 97266 addresses, 235 addresses had multiple non-ephemeral contracts deployed at them.
 
-There are 83 re-inited addresses which had nonzero ether balances.  Here are twenty addresses with the highest Ether balances:
+Of all adddresses which where creators of contracts at re-inited addresses, or re-inited addresses themselves, 83 had nonzero ether balances.  Here are twenty addresses with the highest Ether balances:
 
 | Address | Ether Balance | Creator |
 | --------------------------- | --- | ---- |
@@ -61,6 +61,8 @@ Execute the analysis by running `analyze.py`.
 The analysis script produces several results:
 * `creators-of-redeployed-addrs.csv` - list of any contract that created an child contract which was redeployed.
 * `creators-of-ephemeral-contracts.csv` - list of accounts which created ephemeral contracts.
-* `redeployed-addrs.csv` - a list of addresses which had re-inits.
+* `redeployed-addrs.csv` - a list of addresses which had contract redeployments.
+* `ephemeral-addrs.csv` - a list of addresses where ephemeral contracts executed.
+* `ephemeral-creators-which-reuse-addrs.csv` - creators of ephemeral contracts that executed at re-inited addresses.
 
 To get a list of Ether balances for all accounts in these three csvs, execute `query_balances_for_creators_and_reinited_addrs.py`.
