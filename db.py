@@ -1,10 +1,20 @@
 import sqlite3
 import os
 
-from common import PrecompileCall
-
 DB_NAME='analysis.db'
 analysis_start_block=10000000 # TODO: decide proper start for this
+
+class Contract():
+    def __init__(self, creator, address, isEOA):
+        self.creator = creator
+        self.address = address
+        self.created = 0
+        self.isEOA = isEOA
+        self.contractIncarnations = 0
+        self.ephemeralIncarnations = 0
+        self.exists = True
+        self.invocations = 0
+        self.aggregateGasUsage = 0
 
 class DB():
     def __init__(self):
@@ -44,6 +54,12 @@ class DB():
                     aggregateGasUsage INTEGER,
                 )''')
         self.connection.commit()
+
+    def GetContract(self, address):
+        pass
+
+    def InsertContract(self, address):
+        pass
 
     def createHeadBlockTable(self):
         self.cursor.execute('CREATE TABLE headblock (id TEXT NOT NULL, number TEXT NOT NULL, PRIMARY KEY (id) )')
